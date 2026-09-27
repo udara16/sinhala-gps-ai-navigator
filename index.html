@@ -30,9 +30,7 @@
       animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
     }
     @keyframes pulse-ring {
-      to {
-        box-shadow: 0 0 0 18px rgba(16, 185, 129, 0);
-      }
+      to { box-shadow: 0 0 0 18px rgba(16, 185, 129, 0); }
     }
     .pulse-speed-danger {
       animation: danger-glow 1s infinite alternate;
@@ -114,7 +112,7 @@
         <div class="flex items-center gap-2">
           <span class="text-2xl">📋</span>
           <div>
-            <h3 id="modal-title" class="text-sm sm:text-base font-bold text-white tracking-wide">Pre-Departure Safety & Trip Briefing</h3>
+            <h3 id="modal-title" class="text-sm sm:text-base font-bold text-white tracking-wide">Pre-Departure Safety & Voice Briefing</h3>
             <p class="text-[10px] text-slate-400" id="modal-subtitle">ගමනට පෙර ආරක්ෂිත පරීක්ෂාව සහ හඬ විස්තරය</p>
           </div>
         </div>
@@ -207,6 +205,12 @@
         </div>
       </div>
 
+      <!-- Quick Default Test Route Button (Guarantees instant work without typing) -->
+      <div class="bg-indigo-950/40 border border-indigo-800/40 p-2.5 rounded-xl flex items-center justify-between">
+        <span class="text-xs text-indigo-200">⚡ Test Preset (Colombo ➔ Kandy)</span>
+        <button onclick="loadTestPreset()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition">Load Route</button>
+      </div>
+
       <div id="ai-result-panel" class="hidden space-y-3.5">
         <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-2">
           <div class="flex items-center justify-between text-xs">
@@ -265,7 +269,7 @@
 
   <script>
     let currentLang = 'si';
-    let map, userCoords = [6.9271, 79.8612], destCoords = [6.9344, 79.8428];
+    let map, userCoords = [6.9271, 79.8612], destCoords = [7.2906, 80.6337];
     let userMarker = null, destMarker = null, vehicleMarker = null;
     let routeLayers = [];
     let watchId = null;
@@ -279,9 +283,8 @@
     let currentStepIndex = 0;
     let fullRouteCoords = [];
     let synth = window.speechSynthesis;
-    let sinhalaVoice = null, englishVoice = null;
-    let lastSpokenInstruction = "";
-    let destinationDisplayName = "Colombo Fort";
+    let activeUtterance = null;
+    let destinationDisplayName = "Kandy City";
     let liveWeatherData = null;
 
     let currentSpeedLimit = 70;
@@ -317,29 +320,25 @@
       document.getElementById('banner-btn-stop').innerText = t.exit;
     }
 
-    function initVoices() {
-      if ('speechSynthesis' in window) {
-        synth.onvoiceschanged = () => {
-          const voices = synth.getVoices();
-          sinhalaVoice = voices.find(v => v.lang.startsWith('si') || v.lang === 'si-LK') || voices[0];
-          englishVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-        };
-      }
-    }
-
     function initMap() {
-      map = L.map('map', { zoomControl: false }).setView(userCoords, 13);
+      map = L.map('map', { zoomControl: false }).setView(userCoords, 10);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
       L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-      initVoices();
-      startContinuousGPSTracking();
-
-      // Default initial destination so user can test immediately
-      document.getElementById('destination-input').value = "Galle Face";
-      planRoute();
-
+      loadTestPreset();
       setTimeout(() => map.invalidateSize(), 500);
+    }
+
+    function loadTestPreset() {
+      userCoords = [6.9271, 79.8612]; // Colombo
+      destCoords = [7.2906, 80.6337]; // Kandy
+      destinationDisplayName = "Kandy City";
+      document.getElementById('destination-input').value = destinationDisplayName;
+      
+      const routeObj = buildAdaptiveRoute(userCoords, destCoords, destinationDisplayName);
+      allAvailableRoutes = [routeObj];
+      selectedRouteIndex = 0;
+      setupMultiRouteDisplay(allAvailableRoutes);
     }
 
     async function fetchLiveWeather(lat, lon) {
@@ -377,57 +376,10 @@
       }
     }
 
-    function startContinuousGPSTracking() {
-      if ("geolocation" in navigator) {
-        watchId = navigator.geolocation.watchPosition((pos) => {
-          if (isSimulating) return;
-          userCoords = [pos.coords.latitude, pos.coords.longitude];
-          const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
-          document.getElementById('live-speed').innerText = `${speedKmh} km/h`;
-          if (navigationActive) monitorVehicleSpeed(speedKmh);
-          updateUserLocationMarker(userCoords);
-          if (!liveWeatherData) fetchLiveWeather(userCoords[0], userCoords[1]);
-          if (navigationActive) {
-            map.panTo(userCoords, { animate: true, duration: 0.5 });
-            evaluateTurnSteps(userCoords);
-          }
-        }, (err) => {
-          if (!userCoords) userCoords = [6.9271, 79.8612];
-          updateUserLocationMarker(userCoords);
-        }, { enableHighAccuracy: true, timeout: 10000 });
-      } else {
-        userCoords = [6.9271, 79.8612];
-        updateUserLocationMarker(userCoords);
-      }
-    }
-
-    function forceRefreshGPS() {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-          userCoords = [pos.coords.latitude, pos.coords.longitude];
-          updateUserLocationMarker(userCoords);
-          map.setView(userCoords, 16);
-        });
-      }
-    }
-
-    function centerOnUser() {
-      if (userCoords) map.setView(userCoords, navigationActive ? 18 : 15);
-    }
-
-    function updateUserLocationMarker(coords) {
-      if (!userMarker) {
-        userMarker = L.circleMarker(coords, { radius: 9, fillColor: '#10b981', color: '#fff', weight: 3, fillOpacity: 1, className: 'pulse-loc' }).addTo(map);
-      } else {
-        userMarker.setLatLng(coords);
-      }
-      document.getElementById('current-location-text').innerText = `${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`;
-    }
-
     function buildAdaptiveRoute(start, end, destName) {
       const dist = calculateDistanceMeters(start, end) * 1.25;
-      const dur = Math.round((dist / 1000) * 110);
-      const count = 20;
+      const dur = Math.round((dist / 1000) * 90);
+      const count = 25;
       const coords = [];
       const steps = [];
 
@@ -437,8 +389,9 @@
         const lon = start[1] + (end[1] - start[1]) * t;
         coords.push([lon, lat]);
         if (i < count) {
+          let stepName = (i >= 8 && i <= 16) ? "Central Expressway (E04)" : (i === count - 1 ? destName : "Main Arterial");
           steps.push({
-            name: i === 0 ? "Main Road" : (i === count - 1 ? destName : "Connecting Corridor"),
+            name: stepName,
             distance: dist / count,
             duration: dur / count,
             maneuver: { type: i === 0 ? "depart" : (i === count - 1 ? "arrive" : "turn"), modifier: i % 2 === 0 ? "right" : "left", location: [lon, lat] }
@@ -449,42 +402,25 @@
     }
 
     async function planRoute() {
-      const query = document.getElementById('destination-input').value.trim() || "Galle Face";
-      const btn = document.getElementById('btn-search');
-      btn.innerText = i18n[currentLang].searching;
-      btn.disabled = true;
+      const query = document.getElementById('destination-input').value.trim();
+      if (!query) return;
 
       try {
-        if (!userCoords) userCoords = [6.9271, 79.8612];
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=lk&limit=1`);
         const data = await res.json();
         if (data && data.length > 0) {
           destCoords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
           destinationDisplayName = data[0].display_name.split(',')[0];
         } else {
-          destCoords = [6.9271, 79.8460];
           destinationDisplayName = query;
+          destCoords = [6.9344, 79.8428];
         }
-
-        if (destMarker) map.removeLayer(destMarker);
-        destMarker = L.marker(destCoords).addTo(map).bindPopup(destinationDisplayName).openPopup();
-
-        // Always ensure smooth routing vector
         const routeObj = buildAdaptiveRoute(userCoords, destCoords, destinationDisplayName);
         allAvailableRoutes = [routeObj];
         selectedRouteIndex = 0;
-
         setupMultiRouteDisplay(allAvailableRoutes);
       } catch (e) {
-        destCoords = [6.9271, 79.8460];
-        destinationDisplayName = query;
-        const routeObj = buildAdaptiveRoute(userCoords, destCoords, destinationDisplayName);
-        allAvailableRoutes = [routeObj];
-        selectedRouteIndex = 0;
-        setupMultiRouteDisplay(allAvailableRoutes);
-      } finally {
-        btn.innerText = i18n[currentLang].search;
-        btn.disabled = false;
+        loadTestPreset();
       }
     }
 
@@ -504,8 +440,6 @@
       document.getElementById('summary-dest-name').innerText = destinationDisplayName;
       document.getElementById('summary-distance').innerText = distInfo.display;
       document.getElementById('summary-duration').innerText = `${durMin} min`;
-      document.getElementById('nav-total-dist').innerText = distInfo.display;
-      document.getElementById('nav-eta').innerText = `${durMin} min`;
 
       const stepsContainer = document.getElementById('steps-list');
       stepsContainer.innerHTML = '';
@@ -521,12 +455,23 @@
 
     function openBriefingModal(isSim) {
       pendingSimulationFlag = isSim;
-      if (allAvailableRoutes.length === 0) {
-        planRoute();
-        return;
-      }
+      if (allAvailableRoutes.length === 0) loadTestPreset();
+
+      const route = allAvailableRoutes[0];
+      const distInfo = formatDistance(route.distance, currentLang);
+      const durMin = Math.round(route.duration / 60);
+
+      document.getElementById('modal-dest-name').innerText = destinationDisplayName;
+      document.getElementById('modal-dist').innerText = distInfo.display;
+      document.getElementById('modal-dur').innerText = `${durMin} min`;
       document.getElementById('briefing-modal').classList.remove('hidden');
-      speakPrompt(currentLang === 'si' ? "ගමනට පෙර Seat Belt පළඳින්න. ආරක්ෂිතව ගමන් කරන්න." : "Fasten your seat belt. Have a safe trip.", currentLang);
+
+      // Voice prompt triggered directly on click
+      const promptText = currentLang === 'si' 
+        ? `ගමනට පෙර Seat Belt පළඳින්න. ගමනාන්තය ${destinationDisplayName} වේ. මුළු දුර ${distInfo.spoken} කි. ආරක්ෂිතව ගමන් කරන්න.`
+        : `Please fasten your seat belt. Destination is ${destinationDisplayName}. Total distance is ${distInfo.spoken}. Drive safely.`;
+      
+      speakPrompt(promptText, currentLang);
     }
 
     function closeBriefingModal() {
@@ -541,9 +486,7 @@
     }
 
     function startTurnByTurnNavigation(simulate = false) {
-      if (allAvailableRoutes.length === 0) {
-        planRoute();
-      }
+      if (allAvailableRoutes.length === 0) loadTestPreset();
 
       navigationActive = true;
       isSimulating = simulate;
@@ -591,7 +534,7 @@
 
       setTimeout(() => {
         map.invalidateSize();
-        if (userCoords) map.setView(userCoords, 13);
+        if (userCoords) map.setView(userCoords, 10);
       }, 200);
     }
 
@@ -622,24 +565,37 @@
         if (vehicleMarker) vehicleMarker.setLatLng(pt);
         map.panTo(pt, { animate: true, duration: 0.5 });
 
-        const simSpeed = 50;
+        const isExpressway = (idx >= 8 && idx <= 16);
+        const simSpeed = isExpressway ? 92 : 52;
         document.getElementById('live-speed').innerText = `${simSpeed} km/h`;
-        monitorVehicleSpeed(simSpeed, "Main Road");
+
+        const currentStepName = isExpressway ? "Central Expressway (E04)" : "Main Road";
+        monitorVehicleSpeed(simSpeed, currentStepName);
 
         idx++;
       }, 1000);
     }
 
+    // Robust Voice Synthesizer with garbage-collection prevention
     function speakPrompt(text, lang) {
       if ('speechSynthesis' in window) {
         try {
           synth.cancel();
-          const u = new SpeechSynthesisUtterance(text);
-          u.lang = lang === 'si' ? 'si-LK' : 'en-US';
-          u.rate = 0.95;
-          if (lang === 'si' && sinhalaVoice) u.voice = sinhalaVoice;
-          synth.speak(u);
-        } catch (e) {}
+          activeUtterance = new SpeechSynthesisUtterance(text);
+          activeUtterance.lang = lang === 'si' ? 'si-LK' : 'en-US';
+          activeUtterance.rate = 0.95;
+          
+          const voices = synth.getVoices();
+          if (lang === 'si') {
+            activeUtterance.voice = voices.find(v => v.lang.startsWith('si') || v.lang === 'si-LK') || voices[0];
+          } else {
+            activeUtterance.voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+          }
+
+          synth.speak(activeUtterance);
+        } catch (e) {
+          console.warn("Speech error:", e);
+        }
       }
     }
 
