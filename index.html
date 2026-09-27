@@ -13,7 +13,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    /* Full mobile viewport height fix */
     html, body {
       height: 100%;
       height: 100dvh;
@@ -22,11 +21,7 @@
       overflow: hidden;
       background-color: #020617;
     }
-    #map {
-      height: 100%;
-      width: 100%;
-      z-index: 10;
-    }
+    #map { height: 100%; width: 100%; z-index: 10; }
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     
@@ -39,7 +34,13 @@
         box-shadow: 0 0 0 18px rgba(16, 185, 129, 0);
       }
     }
-    /* Smooth transition when sidebar hides in navigation mode */
+    .pulse-speed-danger {
+      animation: danger-glow 1s infinite alternate;
+    }
+    @keyframes danger-glow {
+      from { border-color: rgba(239, 68, 68, 0.8); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+      to { border-color: rgba(220, 38, 38, 1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
+    }
     .nav-transition {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -47,7 +48,24 @@
 </head>
 <body class="text-slate-100 flex flex-col h-full select-none font-sans">
 
-  <!-- ================= TOP TURN-BY-TURN BANNER (MOBILE FIRST - ALWAYS VISIBLE IN NAV) ================= -->
+  <!-- ================= CRITICAL OVERSPEED WARNING POPUP ================= -->
+  <div id="overspeed-banner" class="hidden fixed top-24 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-rose-950/95 border-2 border-rose-500 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-speed-danger flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl sm:text-4xl p-2 bg-rose-900/80 rounded-xl border border-rose-400 animate-bounce">
+        🚨
+      </div>
+      <div>
+        <h3 id="speed-warn-title" class="text-xs sm:text-sm font-black text-rose-300 uppercase tracking-wider">අවධානය: වේගය අධිකයි!</h3>
+        <p id="speed-warn-desc" class="text-[11px] sm:text-xs text-rose-100 font-medium">අවදානම් වේගයක් අනාවරණය විය. කරුණාකර වේගය අඩු කරන්න.</p>
+      </div>
+    </div>
+    <div class="bg-rose-900/90 border border-rose-400 px-3 py-1.5 rounded-xl text-center shrink-0">
+      <span class="text-[9px] text-rose-300 block uppercase font-bold">Limit: 70</span>
+      <b id="warn-speed-val" class="text-base sm:text-lg font-black text-white font-mono">0 km/h</b>
+    </div>
+  </div>
+
+  <!-- ================= TOP TURN BANNER (ACTIVE NAVIGATION) ================= -->
   <div id="nav-banner" class="hidden fixed top-2 left-2 right-2 sm:left-4 sm:right-4 lg:right-[430px] z-[9999] bg-slate-900/98 backdrop-blur-md border border-emerald-500/60 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-3 min-w-0">
@@ -68,7 +86,7 @@
       </button>
     </div>
 
-    <!-- Quick Stats Bar Inside Banner -->
+    <!-- Quick Stats Bar -->
     <div class="flex items-center justify-between pt-1.5 border-t border-slate-800 text-[11px] text-slate-400">
       <span><span id="banner-lbl-rem">Remaining:</span> <b id="nav-total-dist" class="text-slate-200">--</b></span>
       <span>ETA: <b id="nav-eta" class="text-slate-200">-- min</b></span>
@@ -76,47 +94,88 @@
     </div>
   </div>
 
-  <!-- ================= PRE-DEPARTURE TRIP BRIEFING MODAL ================= -->
-  <div id="briefing-modal" class="hidden fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-slate-900 border border-slate-700 max-w-md w-full rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+  <!-- ================= ADVANCED TRIP BRIEFING MODAL ================= -->
+  <div id="briefing-modal" class="hidden fixed inset-0 z-[10000] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-slate-700 max-w-lg w-full rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto custom-scrollbar">
+      
+      <!-- Header -->
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
-          <span class="text-xl">📋</span>
-          <h3 id="modal-title" class="text-sm sm:text-base font-bold text-white tracking-wide">Trip Pre-Departure Briefing</h3>
+          <span class="text-2xl">📋</span>
+          <div>
+            <h3 id="modal-title" class="text-sm sm:text-base font-bold text-white tracking-wide">Pre-Departure Safety & Trip Briefing</h3>
+            <p class="text-[10px] text-slate-400" id="modal-subtitle">ගමනට පෙර ආරක්ෂිත පරීක්ෂාව සහ විස්තරය</p>
+          </div>
         </div>
         <button onclick="closeBriefingModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
       </div>
 
-      <div class="space-y-3 text-xs leading-relaxed text-slate-300">
-        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60 flex items-center justify-between">
-          <span class="text-slate-400" id="modal-lbl-dest">Destination:</span>
-          <b id="modal-dest-name" class="text-emerald-400 text-sm truncate max-w-[180px]">--</b>
+      <!-- 1. MANDATORY SEAT BELT & SAFETY ALERT -->
+      <div class="bg-amber-950/40 border border-amber-600/50 p-3 rounded-xl flex items-center gap-3">
+        <div class="text-3xl p-2 bg-amber-900/60 rounded-xl border border-amber-500/40 shrink-0">
+          💺
         </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div class="bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50">
-            <span class="text-[11px] text-slate-400" id="modal-lbl-dist">Total Distance</span>
-            <p id="modal-dist" class="text-base font-bold text-white mt-0.5">--</p>
-          </div>
-          <div class="bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50">
-            <span class="text-[11px] text-slate-400" id="modal-lbl-dur">Est. Travel Time</span>
-            <p id="modal-dur" class="text-base font-bold text-amber-400 mt-0.5">-- min</p>
-          </div>
-        </div>
-
-        <div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-800/40 space-y-1">
-          <span class="text-indigo-300 font-semibold flex items-center gap-1.5" id="modal-lbl-ai">
-            <span>🧠</span> AI Strategy & Assessment
-          </span>
-          <p id="modal-briefing-text" class="text-slate-300 text-xs leading-relaxed"></p>
+        <div>
+          <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wide flex items-center gap-1.5" id="modal-lbl-seatbelt-title">
+            <span>⚠️</span> Fasten Your Seat Belt
+          </h4>
+          <p class="text-[11px] text-slate-300 mt-0.5 leading-relaxed" id="modal-lbl-seatbelt-desc">
+            කරුණාකර ගමන ආරම්භ කිරීමට පෙර ඔබගේ Seat Belt (ආරක්ෂිත පටිය) පළඳින්න. ආරක්ෂිතව හා නීත්‍යානුකූලව ධාවනය කරන්න.
+          </p>
         </div>
       </div>
 
-      <div class="flex gap-2 pt-1">
-        <button onclick="closeBriefingModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition" id="modal-btn-cancel">
+      <!-- 2. LIVE CLIMATE & WEATHER CONDITIONS -->
+      <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-xl space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5" id="modal-lbl-weather-title">
+            <span>🌦️</span> Live Climate & Weather Advisory
+          </span>
+          <span id="weather-temp-badge" class="text-xs px-2 py-0.5 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800 font-mono">
+            Scanning...
+          </span>
+        </div>
+        <p id="modal-weather-desc" class="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-700/60">
+          කාලගුණික දත්ත ලබා ගනිමින් පවතී...
+        </p>
+      </div>
+
+      <!-- 3. ROAD PROFILE & SPEED ADVISORY -->
+      <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-xl space-y-1.5">
+        <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5" id="modal-lbl-roads-title">
+          <span>🛣️</span> Road Conditions & Speed Limit Notice
+        </span>
+        <p id="modal-roads-desc" class="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-700/60">
+          මාර්ග තත්ත්වය විශ්ලේෂණය කරමින්...
+        </p>
+      </div>
+
+      <!-- 4. TRIP DISTANCE & TIME STATS -->
+      <div class="grid grid-cols-2 gap-2">
+        <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
+          <span class="text-[10px] text-slate-400" id="modal-lbl-dist">Total Distance</span>
+          <p id="modal-dist" class="text-sm sm:text-base font-bold text-emerald-400 mt-0.5">--</p>
+        </div>
+        <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
+          <span class="text-[10px] text-slate-400" id="modal-lbl-dur">Est. Duration</span>
+          <p id="modal-dur" class="text-sm sm:text-base font-bold text-amber-400 mt-0.5">-- min</p>
+        </div>
+      </div>
+
+      <!-- 5. AI STRATEGY -->
+      <div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-800/40 space-y-1">
+        <span class="text-indigo-300 font-semibold text-xs flex items-center gap-1.5" id="modal-lbl-ai">
+          <span>🧠</span> AI Route Justification
+        </span>
+        <p id="modal-briefing-text" class="text-slate-300 text-xs leading-relaxed"></p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeBriefingModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl text-xs font-semibold transition" id="modal-btn-cancel">
           Cancel
         </button>
-        <button onclick="confirmAndStartNavigation()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-lg flex items-center justify-center gap-1.5" id="modal-btn-proceed">
+        <button onclick="confirmAndStartNavigation()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-xs font-bold transition shadow-lg flex items-center justify-center gap-2" id="modal-btn-proceed">
           <span>🚀</span> Start Trip
         </button>
       </div>
@@ -131,7 +190,7 @@
       </div>
       <div>
         <h1 class="text-xs sm:text-sm font-bold text-white tracking-wide" id="app-title">Lanka AI GPS Navigator</h1>
-        <p class="text-[10px] text-slate-400 leading-tight">By <span class="text-emerald-400 font-medium">Udara Dissanayake</span></p>
+        <p class="text-[10px] text-slate-400 leading-tight">Designed by <span class="text-emerald-400 font-medium">Udara Dissanayake</span></p>
       </div>
     </div>
     
@@ -148,20 +207,20 @@
     </div>
   </header>
 
-  <!-- ================= MAIN CONTENT ================= -->
+  <!-- ================= MAIN VIEW ================= -->
   <main class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
     
-    <!-- Leaflet Map Canvas (Takes 100% height when navigating) -->
+    <!-- Leaflet Map Canvas -->
     <div id="map-container" class="w-full h-[52%] lg:h-full lg:flex-1 relative z-10 nav-transition">
       <div id="map"></div>
 
-      <!-- Floating Re-center / GPS button on map -->
+      <!-- Floating Re-center button -->
       <button onclick="centerOnUser()" class="absolute bottom-4 right-4 z-[500] bg-slate-900/90 text-white p-2.5 rounded-xl border border-slate-700 shadow-xl text-lg hover:bg-slate-800">
         🎯
       </button>
     </div>
 
-    <!-- Sidebar / Planning Dashboard -->
+    <!-- Sidebar Dashboard -->
     <aside id="sidebar-panel" class="w-full h-[48%] lg:h-full lg:w-[420px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-3 sm:p-5 flex flex-col gap-3.5 overflow-y-auto custom-scrollbar z-20 nav-transition">
       
       <!-- Input Section -->
@@ -256,7 +315,7 @@
         <div class="space-y-2 pt-1">
           <button 
             onclick="openBriefingModal(false)"
-            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2"
+            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2"
           >
             <span class="text-base">🔊</span> <span id="btn-live-nav">සැබෑ Live Navigation අරඹන්න</span>
           </button>
@@ -304,6 +363,11 @@
     let sinhalaVoice = null, englishVoice = null;
     let lastSpokenInstruction = "";
     let destinationDisplayName = "";
+    let liveWeatherData = null;
+
+    // Speed Safety Threshold (Sri Lanka Arterial Max = 70 km/h)
+    const SPEED_LIMIT_KMH = 70;
+    let lastSpeedWarningTime = 0; // Cooldown tracker
 
     function formatDistance(meters, lang) {
       if (meters < 1000) {
@@ -343,9 +407,16 @@
         exit: "නවත්වන්න",
         selected: "තෝරා ඇත",
         switch: "මාරු වන්න",
-        modalTitle: "ගමන පිළිබඳ පූර්ව දැනුවත් කිරීම (Trip Briefing)",
+        modalTitle: "ගමනට පෙර ආරක්ෂිත පරීක්ෂාව සහ විස්තරය",
+        modalSubtitle: "Seat Belt, කාලගුණය සහ මාර්ග තත්ත්ව උපදෙස්",
         modalProceed: "ගමන අරඹන්න",
-        modalCancel: "අවලංගු කරන්න"
+        modalCancel: "අවලංගු කරන්න",
+        seatbeltTitle: "⚠️ කරුණාකර Seat Belt පළඳින්න",
+        seatbeltDesc: "ගමන ආරම්භ කිරීමට පෙර ඔබගේ Seat Belt (ආරක්ෂිත පටිය) තහවුරු කරගන්න. වේග සීමාවන්ට අනුකූලව ධාවනය කරන්න.",
+        weatherTitle: "🌦️ සජීවී කාලගුණික උපදෙස්",
+        roadsTitle: "🛣️ මාර්ග සහ වේග සීමා උපදෙස්",
+        speedWarnTitle: "අවධානය: වේගය අධිකයි!",
+        speedWarnDesc: "අවදානම් වේගයක් අනාවරණය විය. කරුණාකර වේගය අඩු කරන්න."
       },
       en: {
         appTitle: "Lanka AI GPS Navigator",
@@ -368,9 +439,16 @@
         exit: "Exit",
         selected: "Selected",
         switch: "Switch",
-        modalTitle: "Pre-Departure Trip Briefing",
+        modalTitle: "Pre-Departure Safety & Trip Briefing",
+        modalSubtitle: "Seat belt, climate & road condition advisory",
         modalProceed: "Start Navigation",
-        modalCancel: "Cancel"
+        modalCancel: "Cancel",
+        seatbeltTitle: "⚠️ Fasten Your Seat Belt",
+        seatbeltDesc: "Please fasten your seat belt before departing. Maintain safe speed limits and obey traffic signals.",
+        weatherTitle: "🌦️ Live Climate & Weather Advisory",
+        roadsTitle: "🛣️ Road Profile & Speed Advisory",
+        speedWarnTitle: "Caution: Speed Exceeded!",
+        speedWarnDesc: "High risk speed detected. Please slow down immediately."
       }
     };
 
@@ -398,8 +476,15 @@
       document.getElementById('banner-lbl-spd').innerText = t.speed;
       document.getElementById('banner-lbl-rem').innerText = t.remDist;
       document.getElementById('modal-title').innerText = t.modalTitle;
+      document.getElementById('modal-subtitle').innerText = t.modalSubtitle;
+      document.getElementById('modal-lbl-seatbelt-title').innerHTML = `<span>⚠️</span> ${t.seatbeltTitle}`;
+      document.getElementById('modal-lbl-seatbelt-desc').innerText = t.seatbeltDesc;
+      document.getElementById('modal-lbl-weather-title').innerHTML = `<span>🌦️</span> ${t.weatherTitle}`;
+      document.getElementById('modal-lbl-roads-title').innerHTML = `<span>🛣️</span> ${t.roadsTitle}`;
       document.getElementById('modal-btn-proceed').innerHTML = `<span>🚀</span> ${t.modalProceed}`;
       document.getElementById('modal-btn-cancel').innerText = t.modalCancel;
+      document.getElementById('speed-warn-title').innerText = t.speedWarnTitle;
+      document.getElementById('speed-warn-desc').innerText = t.speedWarnDesc;
 
       if (allAvailableRoutes.length > 0) {
         setupMultiRouteDisplay(allAvailableRoutes);
@@ -424,15 +509,47 @@
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
-      // Add zoom control at bottom-left so it doesn't conflict with mobile top banners
       L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
       initVoices();
       startContinuousGPSTracking();
 
-      // Ensure proper map sizing on mobile devices
       setTimeout(() => map.invalidateSize(), 400);
       window.addEventListener('resize', () => map.invalidateSize());
+    }
+
+    async function fetchLiveWeather(lat, lon) {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m`);
+        const data = await res.json();
+        if (data && data.current) {
+          liveWeatherData = data.current;
+        }
+      } catch (e) {
+        console.warn("Weather fetch error:", e);
+      }
+    }
+
+    // Critical Speed Monitoring & Alerting
+    function monitorVehicleSpeed(speedKmh) {
+      const banner = document.getElementById('overspeed-banner');
+      document.getElementById('warn-speed-val').innerText = `${speedKmh} km/h`;
+
+      if (speedKmh > SPEED_LIMIT_KMH) {
+        banner.classList.remove('hidden');
+
+        // Throttle voice reminder to once every 15 seconds
+        const now = Date.now();
+        if (now - lastSpeedWarningTime > 15000) {
+          lastSpeedWarningTime = now;
+          const warningSpeech = currentLang === 'si'
+            ? "අවධානය දෙන්න! ඔබගේ වේගය අධිකයි. කරුණාකර වේගය අඩු කර ආරක්ෂිතව ධාවනය කරන්න."
+            : "Caution! Dangerous speed detected. Please slow down and drive safely.";
+          speakPrompt(warningSpeech, currentLang);
+        }
+      } else {
+        banner.classList.add('hidden');
+      }
     }
 
     function startContinuousGPSTracking() {
@@ -452,10 +569,17 @@
             const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
             document.getElementById('live-speed').innerText = `${speedKmh} km/h`;
 
+            // Evaluate speed limit
+            if (navigationActive) {
+              monitorVehicleSpeed(speedKmh);
+            }
+
             statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Active`;
             document.getElementById('current-location-text').innerText = `${newLat.toFixed(4)}, ${newLng.toFixed(4)}`;
 
             updateUserLocationMarker(userCoords);
+
+            if (!liveWeatherData) fetchLiveWeather(newLat, newLng);
 
             if (navigationActive) {
               map.panTo(userCoords, { animate: true, duration: 0.5 });
@@ -463,11 +587,12 @@
             }
           },
           (err) => {
-            console.warn("GPS error:", err.message);
+            console.warn("GPS fallback:", err.message);
             statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Default`;
             if (!userCoords) {
               userCoords = [6.9271, 79.8612];
               updateUserLocationMarker(userCoords);
+              fetchLiveWeather(6.9271, 79.8612);
             }
           },
           { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
@@ -482,6 +607,7 @@
           updateUserLocationMarker(userCoords);
           map.setView(userCoords, 16);
           document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)}`;
+          fetchLiveWeather(userCoords[0], userCoords[1]);
         }, null, { enableHighAccuracy: true, maximumAge: 0 });
       }
     }
@@ -691,12 +817,12 @@
 
       if (currentLang === 'si') {
         document.getElementById('ai-justification').innerText = isPeak 
-          ? `දැනට කාර්යබහුල වේලාවක් (Rush Hour) බැවින් හන්දි වල මාර්ග තදබදය මඟහැරෙන කෙටිම මාර්ගය තෝරා දී ඇත. තවත් විකල්ප ${totalRoutesFound - 1} ක් ඇත.`
-          : `අඩු තදබදයක් සහිත වේලාවකි. ඉන්ධන කාර්යක්ෂමතාව සහ අවම කාලය අනුව වඩාත්ම සුමට මාර්ගය තෝරා දී ඇත.`;
+          ? `දැනට කාර්යබහුල වේලාවක් (Rush Hour) බැවින් හන්දි වල මාර්ග තදබදය මඟහැරෙන කෙටිම මාර්ගය තෝරා දී ඇත.`
+          : `අඩු තදබදයක් සහිත වේලාවකි. ඉන්ධන කාර්යක්ෂමතාව සහ අවම කාලය අනුව සුමට මාර්ගය තෝරා දී ඇත.`;
       } else {
         document.getElementById('ai-justification').innerText = isPeak 
-          ? `Rush hour congestion detected. AI prioritized this route to avoid core junction bottlenecks, saving ~12 mins. ${totalRoutesFound - 1} alternatives available.`
-          : `Off-peak conditions active. This path minimizes travel time and improves fuel efficiency with smooth velocity.`;
+          ? `Rush hour congestion detected. AI prioritized this route to avoid core junction bottlenecks.`
+          : `Off-peak conditions active. This path minimizes travel time and improves fuel efficiency.`;
       }
 
       const stepsContainer = document.getElementById('steps-list');
@@ -715,6 +841,7 @@
       document.getElementById('ai-result-panel').classList.remove('hidden');
     }
 
+    // Modal Pre-Departure Briefing with Seatbelt, Weather, and Speed Notice
     function openBriefingModal(isSim) {
       pendingSimulationFlag = isSim;
       const route = allAvailableRoutes[selectedRouteIndex];
@@ -726,24 +853,54 @@
       document.getElementById('modal-dist').innerText = distInfo.display;
       document.getElementById('modal-dur').innerText = `${durMin} ${currentLang === 'si' ? 'මිනිත්තු' : 'mins'}`;
 
-      let briefingMsg = "";
-      if (currentLang === 'si') {
-        briefingMsg = `ඔබගේ ගමනාන්තය ${destinationDisplayName} වේ. සම්පූර්ණ දුර ${distInfo.spoken} ක් වන අතර ආසන්න වශයෙන් මිනිත්තු ${durMin} ක් ගතවනු ඇත. `;
-        if (altCount > 0) {
-          briefingMsg += `තවත් විකල්ප මාර්ග ${altCount} ක් පවතින අතර, මාර්ග තදබදය අවම සුදුසුම මාර්ගය ඔබ වෙනුවෙන් සකසා ඇත.`;
-        } else {
-          briefingMsg += `මාර්ගය ඔස්සේ ආරක්‍ෂිතව ධාවනය කිරීමට සූදානම් වන්න.`;
-        }
-      } else {
-        briefingMsg = `Your destination is ${destinationDisplayName}. Total distance is ${distInfo.spoken} with an estimated driving duration of ${durMin} minutes. `;
-        if (altCount > 0) {
-          briefingMsg += `We evaluated ${altCount} alternative routes and selected the fastest flow with minimal traffic bottlenecks.`;
-        } else {
-          briefingMsg += `Proceed safely along the marked navigation corridor.`;
-        }
+      let temp = 28;
+      let hasRain = false;
+      let windSpeed = 12;
+
+      if (liveWeatherData) {
+        temp = Math.round(liveWeatherData.temperature_2m);
+        hasRain = liveWeatherData.precipitation > 0.1 || (liveWeatherData.weather_code >= 51 && liveWeatherData.weather_code <= 82);
+        windSpeed = Math.round(liveWeatherData.wind_speed_10m);
       }
 
-      document.getElementById('modal-briefing-text').innerText = briefingMsg;
+      document.getElementById('weather-temp-badge').innerText = `${temp}°C • ${hasRain ? (currentLang === 'si' ? '🌧️ වැසි සහිතයි' : '🌧️ Rainy') : (currentLang === 'si' ? '☀️ වියළි කාලගුණය' : '☀️ Clear')}`;
+
+      let weatherAdvice = "";
+      if (currentLang === 'si') {
+        weatherAdvice = hasRain 
+          ? `දැනට උෂ්ණත්වය සෙල්සියස් අංශක ${temp} කි. වැසි සහිත තත්ත්වයක් පවතින බැවින් මාර්ග ලිස්සන සුළු විය හැක. වේගය පාලනය කර තිරිංග තද කරන්න.`
+          : `දැනට උෂ්ණත්වය සෙල්සියස් අංශක ${temp} කි. වියළි, සාමාන්‍ය කාලගුණයක් පවතින අතර සුළඟේ වේගය ${windSpeed} km/h කි.`;
+      } else {
+        weatherAdvice = hasRain
+          ? `Current temperature is ${temp}°C. Rainy conditions detected; asphalt may be slippery. Reduce speed and brake gently.`
+          : `Current temperature is ${temp}°C. Clear and dry driving conditions with ${windSpeed} km/h wind.`;
+      }
+      document.getElementById('modal-weather-desc').innerText = weatherAdvice;
+
+      let roadAdvice = "";
+      const isLongDistance = route.distance > 25000;
+      if (currentLang === 'si') {
+        roadAdvice = isLongDistance 
+          ? `දිගු දුර ධාවනයකි. නීත්‍යානුකූල වේග සීමාව වන උපරිම 70 km/h නොඉක්මවන්න. අනවශ්‍ය අධික වේගයෙන් වැළකී ආරක්ෂිතව ධාවනය කරන්න.`
+          : `නාගරික මාර්ග ඔස්සේ දිවෙන කෙටි ධාවනයකි. පදික මාරුවීම් හා හන්දි බහුල බැවින් වේගය පාලනය කර ධාවනය කරන්න.`;
+      } else {
+        roadAdvice = isLongDistance
+          ? `Long corridor route. Do not exceed the legal 70 km/h speed threshold. Maintain safe following distance.`
+          : `Urban corridor route with frequent crossings. Maintain controlled cruising speed.`;
+      }
+      document.getElementById('modal-roads-desc').innerText = roadAdvice;
+
+      let briefingMsg = "";
+      if (currentLang === 'si') {
+        briefingMsg = `ගමනට පෙර ඔබගේ ආරක්ෂිත පටිය (Seat Belt) පළඳින්න. අවදානම් අධික වේගයෙන් ධාවනය නොකරන්න. ඔබගේ ගමනාන්තය ${destinationDisplayName} වේ. සම්පූර්ණ දුර ${distInfo.spoken} කි. ${weatherAdvice} ${roadAdvice}`;
+      } else {
+        briefingMsg = `Please fasten your seat belt. Avoid dangerous over-speeding. Your destination is ${destinationDisplayName}. Total distance is ${distInfo.spoken}. ${weatherAdvice} ${roadAdvice}`;
+      }
+
+      document.getElementById('modal-briefing-text').innerText = currentLang === 'si'
+        ? `තෝරාගත් මාර්ගය අවම තදබදයක් සහ සුමට වේගයක් ලබා දේ. විකල්ප මාර්ග ${altCount} ක් පරීක්ෂා කර ඇත.`
+        : `Selected route minimizes bottleneck delay across ${altCount} alternative choices.`;
+
       document.getElementById('briefing-modal').classList.remove('hidden');
 
       speakPrompt(briefingMsg, currentLang);
@@ -759,23 +916,20 @@
       startTurnByTurnNavigation(pendingSimulationFlag);
     }
 
-    // Enter Dedicated Fullscreen Mobile Navigation Mode
     function startTurnByTurnNavigation(simulate = false) {
       navigationActive = true;
       isSimulating = simulate;
 
-      // 1. Show Navigation Banner
       document.getElementById('nav-banner').classList.remove('hidden');
       document.getElementById('nav-mode-indicator').innerText = simulate ? "● Simulation" : "● Live GPS";
 
-      // 2. Hide Mobile Sidebar and expand Map to 100% full screen
+      // Hide Sidebar & Header on Mobile for Fullscreen Navigation
       document.getElementById('sidebar-panel').classList.add('hidden');
       document.getElementById('main-header').classList.add('hidden');
       const mapContainer = document.getElementById('map-container');
       mapContainer.classList.remove('h-[52%]');
       mapContainer.classList.add('h-full');
 
-      // 3. Force Leaflet to resize canvas immediately
       setTimeout(() => {
         map.invalidateSize();
         map.setView(userCoords, 18);
@@ -788,16 +942,15 @@
       }
     }
 
-    // Exit Dedicated Navigation Mode and restore UI
     function stopNavigation() {
       navigationActive = false;
       isSimulating = false;
       if (simulationTimer) clearInterval(simulationTimer);
 
       document.getElementById('nav-banner').classList.add('hidden');
+      document.getElementById('overspeed-banner').classList.add('hidden');
       document.getElementById('live-speed').innerText = `0 km/h`;
 
-      // Restore Header and Sidebar
       document.getElementById('main-header').classList.remove('hidden');
       document.getElementById('sidebar-panel').classList.remove('hidden');
       const mapContainer = document.getElementById('map-container');
@@ -888,9 +1041,12 @@
         updateUserLocationMarker(simPoint);
         map.panTo(simPoint, { animate: true, duration: 0.8 });
 
-        document.getElementById('live-speed').innerText = `48 km/h`;
+        // Simulate safe cruising speed (48 km/h)
+        const simSpeed = 48;
+        document.getElementById('live-speed').innerText = `${simSpeed} km/h`;
         document.getElementById('current-location-text').innerText = `${simPoint[0].toFixed(4)}, ${simPoint[1].toFixed(4)} (Simulated)`;
 
+        monitorVehicleSpeed(simSpeed);
         evaluateTurnSteps(simPoint);
         simIndex++;
       }, 1200);
