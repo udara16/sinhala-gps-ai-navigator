@@ -2,7 +2,7 @@
 <html lang="si">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Lanka AI GPS Navigator & Live Traffic Engine</title>
 
   <!-- Tailwind CSS -->
@@ -13,43 +13,90 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    #map { height: 100%; width: 100%; z-index: 1; }
-    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    /* Full mobile viewport height fix */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #020617;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+      z-index: 10;
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    
     .pulse-loc {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8);
       animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
     }
     @keyframes pulse-ring {
       to {
-        box-shadow: 0 0 0 16px rgba(16, 185, 129, 0);
+        box-shadow: 0 0 0 18px rgba(16, 185, 129, 0);
       }
+    }
+    /* Smooth transition when sidebar hides in navigation mode */
+    .nav-transition {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden font-sans">
+<body class="text-slate-100 flex flex-col h-full select-none font-sans">
 
-  <!-- Trip Briefing Modal (Shown before starting navigation) -->
-  <div id="briefing-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 max-w-lg w-full rounded-2xl p-6 shadow-2xl space-y-4">
+  <!-- ================= TOP TURN-BY-TURN BANNER (MOBILE FIRST - ALWAYS VISIBLE IN NAV) ================= -->
+  <div id="nav-banner" class="hidden fixed top-2 left-2 right-2 sm:left-4 sm:right-4 lg:right-[430px] z-[9999] bg-slate-900/98 backdrop-blur-md border border-emerald-500/60 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-3 min-w-0">
+        <div id="nav-icon" class="text-3xl text-emerald-400 font-bold bg-emerald-950/90 p-2.5 rounded-xl border border-emerald-700/60 shrink-0">
+          ⬆️
+        </div>
+        <div class="min-w-0">
+          <h2 id="nav-instruction" class="text-sm sm:text-base font-bold text-white tracking-wide truncate">කෙළින්ම ඉදිරියට ධාවනය කරන්න</h2>
+          <div class="flex items-center gap-2 sm:gap-3 mt-0.5 text-xs text-slate-300">
+            <span><span id="banner-lbl-in">In:</span> <b id="nav-step-dist" class="text-emerald-400 font-mono text-sm">--</b></span>
+            <span>•</span>
+            <span><span id="banner-lbl-spd">Speed:</span> <b id="live-speed" class="text-amber-400 font-mono">0 km/h</b></span>
+          </div>
+        </div>
+      </div>
+      <button onclick="stopNavigation()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-bold shrink-0 transition shadow-md" id="banner-btn-stop">
+        Exit
+      </button>
+    </div>
+
+    <!-- Quick Stats Bar Inside Banner -->
+    <div class="flex items-center justify-between pt-1.5 border-t border-slate-800 text-[11px] text-slate-400">
+      <span><span id="banner-lbl-rem">Remaining:</span> <b id="nav-total-dist" class="text-slate-200">--</b></span>
+      <span>ETA: <b id="nav-eta" class="text-slate-200">-- min</b></span>
+      <span id="nav-mode-indicator" class="text-emerald-400 font-medium">● Live GPS</span>
+    </div>
+  </div>
+
+  <!-- ================= PRE-DEPARTURE TRIP BRIEFING MODAL ================= -->
+  <div id="briefing-modal" class="hidden fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-slate-700 max-w-md w-full rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-2">
-          <span class="text-2xl">📋</span>
-          <h3 id="modal-title" class="text-base font-bold text-white tracking-wide">Trip Pre-Departure Briefing</h3>
+          <span class="text-xl">📋</span>
+          <h3 id="modal-title" class="text-sm sm:text-base font-bold text-white tracking-wide">Trip Pre-Departure Briefing</h3>
         </div>
-        <button onclick="closeBriefingModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+        <button onclick="closeBriefingModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
       </div>
 
       <div class="space-y-3 text-xs leading-relaxed text-slate-300">
         <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60 flex items-center justify-between">
           <span class="text-slate-400" id="modal-lbl-dest">Destination:</span>
-          <b id="modal-dest-name" class="text-emerald-400 text-sm">--</b>
+          <b id="modal-dest-name" class="text-emerald-400 text-sm truncate max-w-[180px]">--</b>
         </div>
 
         <div class="grid grid-cols-2 gap-2">
           <div class="bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50">
             <span class="text-[11px] text-slate-400" id="modal-lbl-dist">Total Distance</span>
-            <p id="modal-dist" class="text-base font-bold text-white mt-0.5">-- km</p>
+            <p id="modal-dist" class="text-base font-bold text-white mt-0.5">--</p>
           </div>
           <div class="bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50">
             <span class="text-[11px] text-slate-400" id="modal-lbl-dur">Est. Travel Time</span>
@@ -57,15 +104,15 @@
           </div>
         </div>
 
-        <div class="bg-indigo-950/40 p-3.5 rounded-xl border border-indigo-800/40 space-y-1.5">
+        <div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-800/40 space-y-1">
           <span class="text-indigo-300 font-semibold flex items-center gap-1.5" id="modal-lbl-ai">
-            <span>🧠</span> AI Assessment & Congestion Strategy
+            <span>🧠</span> AI Strategy & Assessment
           </span>
           <p id="modal-briefing-text" class="text-slate-300 text-xs leading-relaxed"></p>
         </div>
       </div>
 
-      <div class="flex gap-2 pt-2">
+      <div class="flex gap-2 pt-1">
         <button onclick="closeBriefingModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-semibold transition" id="modal-btn-cancel">
           Cancel
         </button>
@@ -76,90 +123,64 @@
     </div>
   </div>
 
-  <!-- Live Turn-by-Turn Instruction Banner -->
-  <div id="nav-banner" class="hidden absolute top-4 left-4 right-4 lg:left-8 lg:right-[440px] z-20 bg-slate-900/95 backdrop-blur-md border border-emerald-500/50 rounded-2xl p-4 shadow-2xl flex flex-col gap-2">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <div id="nav-icon" class="text-3xl text-emerald-400 font-bold bg-emerald-950/80 p-3 rounded-xl border border-emerald-700/50">
-          ⬆️
-        </div>
-        <div>
-          <h2 id="nav-instruction" class="text-base lg:text-lg font-bold text-white tracking-wide">Continue straight</h2>
-          <div class="flex items-center gap-3 mt-1 text-xs text-slate-300">
-            <span><span id="banner-lbl-in">In:</span> <b id="nav-step-dist" class="text-emerald-400">-- m</b></span>
-            <span>•</span>
-            <span><span id="banner-lbl-spd">Speed:</span> <b id="live-speed" class="text-amber-400">0 km/h</b></span>
-          </div>
-        </div>
-      </div>
-      <button onclick="stopNavigation()" class="bg-rose-600/90 hover:bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition" id="banner-btn-stop">
-        Exit
-      </button>
-    </div>
-
-    <!-- Total Distance & Trip Summary Header in Nav -->
-    <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-      <span><span id="banner-lbl-rem">Remaining:</span> <b id="nav-total-dist" class="text-slate-200">-- km</b></span>
-      <span>ETA: <b id="nav-eta" class="text-slate-200">-- min</b></span>
-      <span id="nav-mode-indicator" class="text-emerald-400 font-medium">● Live GPS</span>
-    </div>
-  </div>
-
-  <!-- Header -->
-  <header class="h-16 bg-slate-900 border-b border-slate-800 px-5 flex items-center justify-between z-10 shrink-0">
-    <div class="flex items-center gap-3">
-      <div class="p-2 bg-emerald-600/20 text-emerald-400 rounded-lg border border-emerald-500/30 text-xl">
+  <!-- ================= APP HEADER ================= -->
+  <header id="main-header" class="h-14 sm:h-16 bg-slate-900 border-b border-slate-800 px-3 sm:px-5 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="p-1.5 sm:p-2 bg-emerald-600/20 text-emerald-400 rounded-lg border border-emerald-500/30 text-lg">
         🇱🇰
       </div>
       <div>
-        <h1 class="text-base font-bold text-white tracking-wide" id="app-title">Lanka AI GPS Navigator</h1>
-        <p class="text-[11px] text-slate-400">Designed by <span class="text-emerald-400 font-medium">Udara Dissanayake</span></p>
+        <h1 class="text-xs sm:text-sm font-bold text-white tracking-wide" id="app-title">Lanka AI GPS Navigator</h1>
+        <p class="text-[10px] text-slate-400 leading-tight">By <span class="text-emerald-400 font-medium">Udara Dissanayake</span></p>
       </div>
     </div>
     
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
       <!-- Language Selector -->
-      <div class="flex bg-slate-800 border border-slate-700 rounded-lg p-0.5 text-xs font-semibold">
-        <button id="lang-si-btn" onclick="setLanguage('si')" class="px-2.5 py-1 rounded bg-emerald-600 text-white transition">සිංහල</button>
-        <button id="lang-en-btn" onclick="setLanguage('en')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">English</button>
+      <div class="flex bg-slate-800 border border-slate-700 rounded-lg p-0.5 text-[11px] font-semibold">
+        <button id="lang-si-btn" onclick="setLanguage('si')" class="px-2 py-0.5 rounded bg-emerald-600 text-white transition">සිං</button>
+        <button id="lang-en-btn" onclick="setLanguage('en')" class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition">EN</button>
       </div>
 
-      <span id="gps-status" class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full hidden sm:flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> GPS Loading...
+      <span id="gps-status" class="text-[10px] sm:text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2 sm:px-3 py-1 rounded-full flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> GPS
       </span>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
     
-    <!-- Map Canvas -->
-    <div class="flex-1 relative h-1/2 lg:h-full">
+    <!-- Leaflet Map Canvas (Takes 100% height when navigating) -->
+    <div id="map-container" class="w-full h-[52%] lg:h-full lg:flex-1 relative z-10 nav-transition">
       <div id="map"></div>
+
+      <!-- Floating Re-center / GPS button on map -->
+      <button onclick="centerOnUser()" class="absolute bottom-4 right-4 z-[500] bg-slate-900/90 text-white p-2.5 rounded-xl border border-slate-700 shadow-xl text-lg hover:bg-slate-800">
+        🎯
+      </button>
     </div>
 
-    <!-- Sidebar / Route Planning Panel -->
-    <aside id="sidebar-panel" class="w-full lg:w-[420px] bg-slate-900/95 backdrop-blur-md border-t lg:border-t-0 lg:border-l border-slate-800 p-5 flex flex-col gap-4 overflow-y-auto custom-scrollbar h-1/2 lg:h-full z-10">
+    <!-- Sidebar / Planning Dashboard -->
+    <aside id="sidebar-panel" class="w-full h-[48%] lg:h-full lg:w-[420px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-3 sm:p-5 flex flex-col gap-3.5 overflow-y-auto custom-scrollbar z-20 nav-transition">
       
       <!-- Input Section -->
-      <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-3">
-        <label id="lbl-plan-trip" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">ගමනාන්තය තෝරන්න</label>
+      <div class="bg-slate-800/80 p-3 sm:p-4 rounded-xl border border-slate-700 space-y-2.5">
+        <label id="lbl-plan-trip" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ගමනාන්තය තෝරන්න</label>
         
         <div>
-          <span id="lbl-origin" class="text-[11px] text-slate-400 mb-1 block">ඔබ සිටින ස්ථානය (Live GPS):</span>
-          <div class="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300">
-            <div class="flex items-center gap-2 truncate">
+          <div class="flex items-center justify-between bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
+            <div class="flex items-center gap-1.5 truncate">
               <span class="text-emerald-400">📍</span>
-              <span id="current-location-text" class="truncate font-mono">GPS ස්ථානය සොයමින්...</span>
+              <span id="current-location-text" class="truncate font-mono text-[11px]">GPS ස්ථානය සොයමින්...</span>
             </div>
-            <button onclick="forceRefreshGPS()" title="Re-sync GPS" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300 border border-slate-600">
+            <button onclick="forceRefreshGPS()" title="Re-sync GPS" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300 border border-slate-600">
               🔄 Sync
             </button>
           </div>
         </div>
 
         <div>
-          <label id="lbl-dest" for="destination-input" class="text-[11px] text-slate-400 mb-1 block">යන ස්ථානය (නගරය / ප්‍රදේශය):</label>
           <div class="flex gap-2">
             <input 
               id="destination-input" 
@@ -171,7 +192,7 @@
             <button 
               onclick="planRoute()"
               id="btn-search"
-              class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition shadow-sm"
+              class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold tracking-wide transition shadow-sm shrink-0"
             >
               සොයන්න
             </button>
@@ -180,93 +201,92 @@
       </div>
 
       <!-- AI Insights & Action Panel -->
-      <div id="ai-result-panel" class="hidden space-y-4">
+      <div id="ai-result-panel" class="hidden space-y-3.5">
         
         <!-- Total Trip Stats Summary -->
-        <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 space-y-2">
+        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-2">
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400" id="card-lbl-dest">ගමනාන්තය:</span>
-            <b id="summary-dest-name" class="text-white text-right truncate max-w-[200px]">--</b>
+            <b id="summary-dest-name" class="text-white text-right truncate max-w-[180px]">--</b>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/60">
             <div>
-              <span class="text-[11px] text-slate-400" id="card-lbl-dist">මුළු දුර:</span>
-              <p id="summary-distance" class="text-base font-bold text-emerald-400">-- km</p>
+              <span class="text-[10px] text-slate-400" id="card-lbl-dist">මුළු දුර:</span>
+              <p id="summary-distance" class="text-sm sm:text-base font-bold text-emerald-400">--</p>
             </div>
             <div>
-              <span class="text-[11px] text-slate-400" id="card-lbl-dur">ඇස්තමේන්තුගත කාලය:</span>
-              <p id="summary-duration" class="text-base font-bold text-amber-400">-- min</p>
+              <span class="text-[10px] text-slate-400" id="card-lbl-dur">ඇස්තමේන්තුගත කාලය:</span>
+              <p id="summary-duration" class="text-sm sm:text-base font-bold text-amber-400">-- min</p>
             </div>
           </div>
         </div>
 
         <!-- Accuracy & Congestion -->
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/80">
-            <span class="text-[11px] text-slate-400" id="lbl-accuracy">AI නිරවද්‍යතාව</span>
-            <div class="flex items-baseline gap-1 mt-1">
-              <span id="ai-accuracy" class="text-xl font-bold text-emerald-400">--%</span>
-              <span class="text-[10px] text-slate-500" id="lbl-conf">(විශ්වාසය)</span>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
+            <span class="text-[10px] text-slate-400" id="lbl-accuracy">AI නිරවද්‍යතාව</span>
+            <div class="flex items-baseline gap-1 mt-0.5">
+              <span id="ai-accuracy" class="text-base font-bold text-emerald-400">--%</span>
+              <span class="text-[9px] text-slate-500" id="lbl-conf">(විශ්වාසය)</span>
             </div>
           </div>
-          <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/80">
-            <span class="text-[11px] text-slate-400" id="lbl-congestion">මාර්ග තදබදය</span>
-            <div class="flex items-baseline gap-1 mt-1">
-              <span id="ai-congestion" class="text-xl font-bold text-amber-400">සාමාන්‍යයි</span>
+          <div class="bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/80">
+            <span class="text-[10px] text-slate-400" id="lbl-congestion">මාර්ග තදබදය</span>
+            <div class="flex items-baseline gap-1 mt-0.5">
+              <span id="ai-congestion" class="text-sm font-bold text-amber-400">සාමාන්‍යයි</span>
             </div>
           </div>
         </div>
 
         <!-- AI Route Justification Box -->
-        <div class="bg-emerald-950/30 border border-emerald-800/50 p-3.5 rounded-xl space-y-2">
+        <div class="bg-emerald-950/30 border border-emerald-800/50 p-3 rounded-xl space-y-1">
           <div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-400" id="lbl-ai-rec">
-            <span>🧠</span> AI නිර්දේශය (හේතු දැක්වීම)
+            <span>🧠</span> AI නිර්දේශය
           </div>
           <p id="ai-justification" class="text-xs text-slate-300 leading-relaxed"></p>
         </div>
 
         <!-- Routes Comparison Section -->
         <div>
-          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" id="lbl-alt-routes">පවතින මාර්ග (Alternative Paths)</h3>
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" id="lbl-alt-routes">පවතින මාර්ග</h3>
           <div id="routes-comparison-list" class="space-y-2"></div>
         </div>
 
-        <!-- Navigation Action Buttons (Opens Briefing First) -->
+        <!-- Navigation Action Buttons -->
         <div class="space-y-2 pt-1">
           <button 
             onclick="openBriefingModal(false)"
-            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2"
+            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2"
           >
-            <span class="text-lg">🔊</span> <span id="btn-live-nav">සැබෑ Live Navigation අරඹන්න</span>
+            <span class="text-base">🔊</span> <span id="btn-live-nav">සැබෑ Live Navigation අරඹන්න</span>
           </button>
 
-          <!-- Simulation mode -->
           <button 
             onclick="openBriefingModal(true)"
-            class="w-full bg-indigo-700/80 hover:bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-medium tracking-wide transition flex items-center justify-center gap-2 border border-indigo-500/40"
+            class="w-full bg-indigo-700/80 hover:bg-indigo-600 text-white py-2 rounded-xl text-xs font-medium tracking-wide transition flex items-center justify-center gap-2 border border-indigo-500/40"
           >
-            <span>🎮</span> <span id="btn-sim-nav">Live ධාවන Simulation එකක් බලන්න (Demo)</span>
+            <span>🎮</span> <span id="btn-sim-nav">Live ධාවන Simulation (Demo)</span>
           </button>
         </div>
 
         <!-- Turn-by-Turn Steps Preview -->
         <div>
-          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" id="lbl-steps-list">ගමන් මඟ විස්තරය (පියවරෙන් පියවර)</h3>
-          <div id="steps-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" id="lbl-steps-list">ගමන් මඟ විස්තරය</h3>
+          <div id="steps-list" class="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1"></div>
         </div>
 
       </div>
 
       <!-- App Footer Attribution -->
-      <div class="mt-auto pt-4 border-t border-slate-800 text-center">
-        <p class="text-[11px] text-slate-500">Designed & Developed by <span class="text-slate-400 font-medium">Udara Dissanayake</span></p>
+      <div class="mt-auto pt-3 border-t border-slate-800 text-center">
+        <p class="text-[10px] text-slate-500">Designed & Developed by <span class="text-slate-400 font-medium">Udara Dissanayake</span></p>
       </div>
 
     </aside>
   </main>
 
   <script>
-    let currentLang = 'si'; // Default language ('si' or 'en')
+    let currentLang = 'si';
     let map, userCoords = null, destCoords = null;
     let userMarker = null, destMarker = null;
     let routeLayers = [];
@@ -285,13 +305,26 @@
     let lastSpokenInstruction = "";
     let destinationDisplayName = "";
 
-    // Localization Strings
+    function formatDistance(meters, lang) {
+      if (meters < 1000) {
+        const roundedM = Math.round(meters);
+        return {
+          display: lang === 'si' ? `${roundedM} මීටර්` : `${roundedM} m`,
+          spoken: lang === 'si' ? `මීටර් ${roundedM}` : `${roundedM} meters`
+        };
+      } else {
+        const km = (meters / 1000).toFixed(1);
+        return {
+          display: lang === 'si' ? `${km} km` : `${km} km`,
+          spoken: lang === 'si' ? `කිලෝමීටර් ${km}` : `${km} kilometers`
+        };
+      }
+    }
+
     const i18n = {
       si: {
         appTitle: "සිංහල AI GPS Navigator",
         planTrip: "ගමනාන්තය තෝරන්න",
-        origin: "ඔබ සිටින ස්ථානය (Live GPS):",
-        dest: "යන ස්ථානය (නගරය / ප්‍රදේශය):",
         search: "සොයන්න",
         searching: "සොයමින්...",
         destCard: "ගමනාන්තය:",
@@ -300,12 +333,11 @@
         accuracy: "AI නිරවද්‍යතාව",
         conf: "(විශ්වාසය)",
         congestion: "මාර්ග තදබදය",
-        aiRec: "🧠 AI නිර්දේශය (හේතු දැක්වීම)",
+        aiRec: "🧠 AI නිර්දේශය",
         altRoutes: "පවතින මාර්ග (Alternative Paths)",
         liveNav: "සැබෑ Live Navigation අරඹන්න",
-        simNav: "Live ධාවන Simulation එකක් බලන්න (Demo)",
-        steps: "ගමන් මඟ විස්තරය (පියවරෙන් පියවර)",
-        inMeters: "මීටර්",
+        simNav: "Live ධාවන Simulation (Demo)",
+        steps: "ගමන් මඟ විස්තරය",
         speed: "වේගය:",
         remDist: "ඉතිරි දුර:",
         exit: "නවත්වන්න",
@@ -318,8 +350,6 @@
       en: {
         appTitle: "Lanka AI GPS Navigator",
         planTrip: "Plan Your Route",
-        origin: "Current Location (Live GPS):",
-        dest: "Destination (City / Area):",
         search: "Search",
         searching: "Searching...",
         destCard: "Destination:",
@@ -333,7 +363,6 @@
         liveNav: "Start Live GPS Navigation",
         simNav: "Watch Driving Simulation (Demo)",
         steps: "Turn-by-Turn Directions",
-        inMeters: "m",
         speed: "Speed:",
         remDist: "Remaining:",
         exit: "Exit",
@@ -347,14 +376,12 @@
 
     function setLanguage(lang) {
       currentLang = lang;
-      document.getElementById('lang-si-btn').className = lang === 'si' ? 'px-2.5 py-1 rounded bg-emerald-600 text-white transition' : 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition';
-      document.getElementById('lang-en-btn').className = lang === 'en' ? 'px-2.5 py-1 rounded bg-emerald-600 text-white transition' : 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('lang-si-btn').className = lang === 'si' ? 'px-2 py-0.5 rounded bg-emerald-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('lang-en-btn').className = lang === 'en' ? 'px-2 py-0.5 rounded bg-emerald-600 text-white transition' : 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition';
 
       const t = i18n[lang];
       document.getElementById('app-title').innerText = t.appTitle;
       document.getElementById('lbl-plan-trip').innerText = t.planTrip;
-      document.getElementById('lbl-origin').innerText = t.origin;
-      document.getElementById('lbl-dest').innerText = t.dest;
       document.getElementById('btn-search').innerText = t.search;
       document.getElementById('card-lbl-dest').innerText = t.destCard;
       document.getElementById('card-lbl-dist').innerText = t.distCard;
@@ -391,14 +418,21 @@
     }
 
     function initMap() {
-      map = L.map('map').setView([7.8731, 80.7718], 8);
+      map = L.map('map', { zoomControl: false }).setView([7.8731, 80.7718], 8);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
+      // Add zoom control at bottom-left so it doesn't conflict with mobile top banners
+      L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
       initVoices();
       startContinuousGPSTracking();
+
+      // Ensure proper map sizing on mobile devices
+      setTimeout(() => map.invalidateSize(), 400);
+      window.addEventListener('resize', () => map.invalidateSize());
     }
 
     function startContinuousGPSTracking() {
@@ -418,7 +452,7 @@
             const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
             document.getElementById('live-speed').innerText = `${speedKmh} km/h`;
 
-            statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> GPS Active`;
+            statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Active`;
             document.getElementById('current-location-text').innerText = `${newLat.toFixed(4)}, ${newLng.toFixed(4)}`;
 
             updateUserLocationMarker(userCoords);
@@ -430,7 +464,7 @@
           },
           (err) => {
             console.warn("GPS error:", err.message);
-            statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> GPS Fallback`;
+            statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Default`;
             if (!userCoords) {
               userCoords = [6.9271, 79.8612];
               updateUserLocationMarker(userCoords);
@@ -449,6 +483,12 @@
           map.setView(userCoords, 16);
           document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)}`;
         }, null, { enableHighAccuracy: true, maximumAge: 0 });
+      }
+    }
+
+    function centerOnUser() {
+      if (userCoords) {
+        map.setView(userCoords, navigationActive ? 18 : 15);
       }
     }
 
@@ -518,25 +558,24 @@
       const roadName = step.name ? `(${step.name})` : "";
 
       if (lang === 'si') {
-        if (type === "depart") return `ගමන ආරම්භ කරන්න. කෙළින්ම ඉදිරියට ධාවනය කරන්න ${roadName}`;
+        if (type === "depart") return `ගමන ආරම්භ කරන්න. ඉදිරියට ධාවනය කරන්න ${roadName}`;
         if (type === "arrive") return "ඔබගේ ගමනාන්තයට ළඟා වී ඇත.";
         if (type === "roundabout" || type === "rotary") return `වටරවුමෙන් ඉදිරියට යන්න ${roadName}`;
 
         if (modifier.includes("right")) {
-          if (modifier.includes("slight")) return `ඉදිරියෙන් මඳක් දකුණට හරවන්න ${roadName}`;
-          if (modifier.includes("sharp")) return `ඉදිරියෙන් තදින් දකුණට හරවන්න ${roadName}`;
-          return `ඉදිරියෙන් දකුණට හරවන්න ${roadName}`;
+          if (modifier.includes("slight")) return `මඳක් දකුණට හරවන්න ${roadName}`;
+          if (modifier.includes("sharp")) return `තදින් දකුණට හරවන්න ${roadName}`;
+          return `දකුණට හරවන්න ${roadName}`;
         }
         if (modifier.includes("left")) {
-          if (modifier.includes("slight")) return `ඉදිරියෙන් මඳක් වමට හරවන්න ${roadName}`;
-          if (modifier.includes("sharp")) return `ඉදිරියෙන් තදින් වමට හරවන්න ${roadName}`;
-          return `ඉදිරියෙන් වමට හරවන්න ${roadName}`;
+          if (modifier.includes("slight")) return `මඳක් වමට හරවන්න ${roadName}`;
+          if (modifier.includes("sharp")) return `තදින් වමට හරවන්න ${roadName}`;
+          return `වමට හරවන්න ${roadName}`;
         }
-        if (modifier.includes("uturn")) return "ඉදිරියෙන් යූ ටර්න් (U-Turn) එකක් ගන්න";
+        if (modifier.includes("uturn")) return "යූ ටර්න් (U-Turn) එකක් ගන්න";
 
         return `කෙළින්ම ඉදිරියට ධාවනය කරන්න ${roadName}`;
       } else {
-        // English
         if (type === "depart") return `Start your journey. Proceed straight on ${step.name || "the road"}`;
         if (type === "arrive") return "You have reached your destination.";
         if (type === "roundabout" || type === "rotary") return `Enter the roundabout and continue on ${step.name || "the road"}`;
@@ -571,7 +610,7 @@
         const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
         coords.forEach(pt => bounds.extend(pt));
 
-        const distKm = (route.distance / 1000).toFixed(1);
+        const distInfo = formatDistance(route.distance, currentLang);
         const durMin = Math.round(route.duration / 60);
 
         const polyline = L.polyline(coords, {
@@ -581,19 +620,19 @@
           dashArray: isPrimary ? null : '6, 8'
         }).addTo(map);
 
-        polyline.bindPopup(`<b>${currentLang === 'si' ? 'මාර්ගය' : 'Route'} ${idx + 1}</b><br>${distKm} km • ${durMin} min`);
+        polyline.bindPopup(`<b>${currentLang === 'si' ? 'මාර්ගය' : 'Route'} ${idx + 1}</b><br>${distInfo.display} • ${durMin} min`);
         routeLayers.push(polyline);
 
         const card = document.createElement('div');
-        card.className = `p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
+        card.className = `p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${
           isPrimary 
             ? 'bg-emerald-950/40 border-emerald-500/60 ring-1 ring-emerald-500/30' 
             : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800'
         }`;
 
         const routeTitle = currentLang === 'si' 
-          ? `මාර්ගය ${idx + 1} ${isPrimary ? '(ප්‍රධාන නිර්දේශය)' : '(විකල්ප)'}`
-          : `Route ${idx + 1} ${isPrimary ? '(AI Recommended)' : '(Alternative)'}`;
+          ? `මාර්ගය ${idx + 1} ${isPrimary ? '(නිර්දේශය)' : '(විකල්ප)'}`
+          : `Route ${idx + 1} ${isPrimary ? '(Recommended)' : '(Alt)'}`;
 
         const durText = currentLang === 'si' ? 'මිනිත්තු' : 'min';
 
@@ -602,9 +641,9 @@
             <div class="flex items-center gap-2">
               <span class="text-xs font-bold ${isPrimary ? 'text-emerald-400' : 'text-slate-300'}">${routeTitle}</span>
             </div>
-            <p class="text-[11px] text-slate-400 mt-0.5">${distKm} km • ${durMin} ${durText}</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">${distInfo.display} • ${durMin} ${durText}</p>
           </div>
-          <button class="text-xs px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300">
+          <button class="text-[11px] px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300">
             ${isPrimary ? i18n[currentLang].selected : i18n[currentLang].switch}
           </button>
         `;
@@ -617,7 +656,7 @@
         comparisonContainer.appendChild(card);
       });
 
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [40, 40] });
       applyRouteDetails(routes[selectedRouteIndex], routes.length);
     }
 
@@ -626,14 +665,14 @@
       currentStepIndex = 0;
       fullRouteCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
 
-      const totalDistKm = (route.distance / 1000).toFixed(1);
+      const distInfo = formatDistance(route.distance, currentLang);
       const totalDurMin = Math.round(route.duration / 60);
 
       document.getElementById('summary-dest-name').innerText = destinationDisplayName;
-      document.getElementById('summary-distance').innerText = `${totalDistKm} km`;
+      document.getElementById('summary-distance').innerText = distInfo.display;
       document.getElementById('summary-duration').innerText = `${totalDurMin} ${currentLang === 'si' ? 'මිනිත්තු' : 'mins'}`;
 
-      document.getElementById('nav-total-dist').innerText = `${totalDistKm} km`;
+      document.getElementById('nav-total-dist').innerText = distInfo.display;
       document.getElementById('nav-eta').innerText = `${totalDurMin} min`;
 
       const hour = new Date().getHours();
@@ -648,26 +687,27 @@
       } else {
         congElem.innerText = isPeak ? "Peak Hour Traffic" : "Optimal Flow";
       }
-      congElem.className = `text-xl font-bold ${isPeak ? 'text-rose-400' : 'text-emerald-400'}`;
+      congElem.className = `text-sm font-bold ${isPeak ? 'text-rose-400' : 'text-emerald-400'}`;
 
       if (currentLang === 'si') {
         document.getElementById('ai-justification').innerText = isPeak 
-          ? `දැනට කාර්යබහුල වේලාවක් (Rush Hour) පවතින බැවින් හන්දි වල මාර්ග තදබදය මඟහැරෙන කෙටිම මාර්ගය තෝරා දී ඇත. තවත් විකල්ප මාර්ග ${totalRoutesFound - 1} ක් පවතී.`
-          : `අඩු තදබදයක් සහිත වේලාවකි. ඉන්ධන කාර්යක්ෂමතාව සහ අවම කාලය සැලකිල්ලට ගෙන වඩාත්ම සුමට මාර්ගය තෝරා දී ඇත.`;
+          ? `දැනට කාර්යබහුල වේලාවක් (Rush Hour) බැවින් හන්දි වල මාර්ග තදබදය මඟහැරෙන කෙටිම මාර්ගය තෝරා දී ඇත. තවත් විකල්ප ${totalRoutesFound - 1} ක් ඇත.`
+          : `අඩු තදබදයක් සහිත වේලාවකි. ඉන්ධන කාර්යක්ෂමතාව සහ අවම කාලය අනුව වඩාත්ම සුමට මාර්ගය තෝරා දී ඇත.`;
       } else {
         document.getElementById('ai-justification').innerText = isPeak 
-          ? `Rush hour congestion detected. AI prioritized this route to avoid core junction bottlenecks, saving ~12 mins. ${totalRoutesFound - 1} alternative routes available.`
-          : `Off-peak conditions active. This path minimizes travel time and improves fuel efficiency with smooth transit velocity.`;
+          ? `Rush hour congestion detected. AI prioritized this route to avoid core junction bottlenecks, saving ~12 mins. ${totalRoutesFound - 1} alternatives available.`
+          : `Off-peak conditions active. This path minimizes travel time and improves fuel efficiency with smooth velocity.`;
       }
 
       const stepsContainer = document.getElementById('steps-list');
       stepsContainer.innerHTML = '';
       currentRouteSteps.forEach((st, i) => {
+        const stepDistInfo = formatDistance(st.distance, currentLang);
         const item = document.createElement('div');
-        item.className = "text-xs bg-slate-800 p-2.5 rounded-lg border border-slate-700/60 flex items-center justify-between";
+        item.className = "text-[11px] bg-slate-800 p-2 rounded-lg border border-slate-700/60 flex items-center justify-between";
         item.innerHTML = `
-          <span>${i + 1}. ${getStepInstruction(st, currentLang)}</span>
-          <span class="text-slate-400 font-mono">${Math.round(st.distance)} ${i18n[currentLang].inMeters}</span>
+          <span class="truncate mr-2">${i + 1}. ${getStepInstruction(st, currentLang)}</span>
+          <span class="text-slate-400 font-mono shrink-0">${stepDistInfo.display}</span>
         `;
         stepsContainer.appendChild(item);
       });
@@ -675,28 +715,27 @@
       document.getElementById('ai-result-panel').classList.remove('hidden');
     }
 
-    // Modal Pre-Departure Briefing Logic
     function openBriefingModal(isSim) {
       pendingSimulationFlag = isSim;
       const route = allAvailableRoutes[selectedRouteIndex];
-      const distKm = (route.distance / 1000).toFixed(1);
+      const distInfo = formatDistance(route.distance, currentLang);
       const durMin = Math.round(route.duration / 60);
       const altCount = allAvailableRoutes.length - 1;
 
       document.getElementById('modal-dest-name').innerText = destinationDisplayName;
-      document.getElementById('modal-dist').innerText = `${distKm} km`;
+      document.getElementById('modal-dist').innerText = distInfo.display;
       document.getElementById('modal-dur').innerText = `${durMin} ${currentLang === 'si' ? 'මිනිත්තු' : 'mins'}`;
 
       let briefingMsg = "";
       if (currentLang === 'si') {
-        briefingMsg = `ඔබගේ ගමනාන්තය ${destinationDisplayName} වේ. සම්පූර්ණ දුර කිලෝමීටර් ${distKm} ක් වන අතර ආසන්න වශයෙන් මිනිත්තු ${durMin} ක් ගතවනු ඇත. `;
+        briefingMsg = `ඔබගේ ගමනාන්තය ${destinationDisplayName} වේ. සම්පූර්ණ දුර ${distInfo.spoken} ක් වන අතර ආසන්න වශයෙන් මිනිත්තු ${durMin} ක් ගතවනු ඇත. `;
         if (altCount > 0) {
           briefingMsg += `තවත් විකල්ප මාර්ග ${altCount} ක් පවතින අතර, මාර්ග තදබදය අවම සුදුසුම මාර්ගය ඔබ වෙනුවෙන් සකසා ඇත.`;
         } else {
           briefingMsg += `මාර්ගය ඔස්සේ ආරක්‍ෂිතව ධාවනය කිරීමට සූදානම් වන්න.`;
         }
       } else {
-        briefingMsg = `Your destination is ${destinationDisplayName}. Total distance is ${distKm} km with an estimated driving duration of ${durMin} minutes. `;
+        briefingMsg = `Your destination is ${destinationDisplayName}. Total distance is ${distInfo.spoken} with an estimated driving duration of ${durMin} minutes. `;
         if (altCount > 0) {
           briefingMsg += `We evaluated ${altCount} alternative routes and selected the fastest flow with minimal traffic bottlenecks.`;
         } else {
@@ -707,7 +746,6 @@
       document.getElementById('modal-briefing-text').innerText = briefingMsg;
       document.getElementById('briefing-modal').classList.remove('hidden');
 
-      // Voice Briefing
       speakPrompt(briefingMsg, currentLang);
     }
 
@@ -721,12 +759,27 @@
       startTurnByTurnNavigation(pendingSimulationFlag);
     }
 
+    // Enter Dedicated Fullscreen Mobile Navigation Mode
     function startTurnByTurnNavigation(simulate = false) {
       navigationActive = true;
       isSimulating = simulate;
+
+      // 1. Show Navigation Banner
       document.getElementById('nav-banner').classList.remove('hidden');
-      document.getElementById('nav-mode-indicator').innerText = simulate ? "● Simulation Mode" : "● Live GPS";
-      map.setView(userCoords, 18);
+      document.getElementById('nav-mode-indicator').innerText = simulate ? "● Simulation" : "● Live GPS";
+
+      // 2. Hide Mobile Sidebar and expand Map to 100% full screen
+      document.getElementById('sidebar-panel').classList.add('hidden');
+      document.getElementById('main-header').classList.add('hidden');
+      const mapContainer = document.getElementById('map-container');
+      mapContainer.classList.remove('h-[52%]');
+      mapContainer.classList.add('h-full');
+
+      // 3. Force Leaflet to resize canvas immediately
+      setTimeout(() => {
+        map.invalidateSize();
+        map.setView(userCoords, 18);
+      }, 200);
 
       updateNavigationDisplay();
 
@@ -735,12 +788,27 @@
       }
     }
 
+    // Exit Dedicated Navigation Mode and restore UI
     function stopNavigation() {
       navigationActive = false;
       isSimulating = false;
       if (simulationTimer) clearInterval(simulationTimer);
+
       document.getElementById('nav-banner').classList.add('hidden');
       document.getElementById('live-speed').innerText = `0 km/h`;
+
+      // Restore Header and Sidebar
+      document.getElementById('main-header').classList.remove('hidden');
+      document.getElementById('sidebar-panel').classList.remove('hidden');
+      const mapContainer = document.getElementById('map-container');
+      mapContainer.classList.remove('h-full');
+      mapContainer.classList.add('h-[52%]');
+
+      setTimeout(() => {
+        map.invalidateSize();
+        if (userCoords) map.setView(userCoords, 14);
+      }, 200);
+
       speakPrompt(currentLang === 'si' ? "මාර්ග සංචලනය නැවැත්තුවා." : "Navigation stopped.", currentLang);
     }
 
@@ -750,8 +818,9 @@
       const currentStep = currentRouteSteps[currentStepIndex];
       const stepLocation = [currentStep.maneuver.location[1], currentStep.maneuver.location[0]];
       const distToTurn = calculateDistanceMeters(currentLoc, stepLocation);
+      const stepDistInfo = formatDistance(distToTurn, currentLang);
 
-      document.getElementById('nav-step-dist').innerText = `${Math.round(distToTurn)} ${i18n[currentLang].inMeters}`;
+      document.getElementById('nav-step-dist').innerText = stepDistInfo.display;
 
       if (distToTurn < 30 && currentStepIndex < currentRouteSteps.length - 1) {
         currentStepIndex++;
@@ -759,8 +828,8 @@
       } else if (distToTurn < 85 && distToTurn > 65) {
         const stepText = getStepInstruction(currentStep, currentLang);
         const reminder = currentLang === 'si' 
-          ? `තව මීටර් ${Math.round(distToTurn)}කින් ${stepText}`
-          : `In ${Math.round(distToTurn)} meters, ${stepText}`;
+          ? `තව ${stepDistInfo.spoken}කින් ${stepText}`
+          : `In ${stepDistInfo.spoken}, ${stepText}`;
         speakPrompt(reminder, currentLang);
       }
     }
@@ -768,9 +837,10 @@
     function updateNavigationDisplay() {
       const step = currentRouteSteps[currentStepIndex];
       const instruction = getStepInstruction(step, currentLang);
+      const stepDistInfo = formatDistance(step.distance, currentLang);
       
       document.getElementById('nav-instruction').innerText = instruction;
-      document.getElementById('nav-step-dist').innerText = `${Math.round(step.distance)} ${i18n[currentLang].inMeters}`;
+      document.getElementById('nav-step-dist').innerText = stepDistInfo.display;
 
       const iconBox = document.getElementById('nav-icon');
       const modifier = step.maneuver.modifier || "";
@@ -779,8 +849,9 @@
       else if (step.maneuver.type.includes('roundabout')) iconBox.innerText = '🔄';
       else iconBox.innerText = '⬆️';
 
-      const remainingDist = calculateRemainingRouteDistance(currentStepIndex);
-      document.getElementById('nav-total-dist').innerText = `${(remainingDist / 1000).toFixed(1)} km`;
+      const remainingDistMeters = calculateRemainingRouteDistance(currentStepIndex);
+      const remainingInfo = formatDistance(remainingDistMeters, currentLang);
+      document.getElementById('nav-total-dist').innerText = remainingInfo.display;
 
       if (lastSpokenInstruction !== instruction) {
         speakPrompt(instruction, currentLang);
