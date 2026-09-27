@@ -41,6 +41,13 @@
       from { border-color: rgba(239, 68, 68, 0.8); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
       to { border-color: rgba(220, 38, 38, 1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
     }
+    .pulse-highway {
+      animation: highway-glow 1.2s infinite alternate;
+    }
+    @keyframes highway-glow {
+      from { border-color: rgba(59, 130, 246, 0.8); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+      to { border-color: rgba(37, 99, 235, 1); box-shadow: 0 0 25px rgba(37, 99, 235, 0.9); }
+    }
     .nav-transition {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -60,9 +67,23 @@
       </div>
     </div>
     <div class="bg-rose-900/90 border border-rose-400 px-3 py-1.5 rounded-xl text-center shrink-0">
-      <span class="text-[9px] text-rose-300 block uppercase font-bold">Limit: 70</span>
+      <span class="text-[9px] text-rose-300 block uppercase font-bold" id="speed-limit-badge">Limit: 70</span>
       <b id="warn-speed-val" class="text-base sm:text-lg font-black text-white font-mono">0 km/h</b>
     </div>
+  </div>
+
+  <!-- ================= HIGHWAY SEAT BELT SPECIAL ALERT ================= -->
+  <div id="highway-banner" class="hidden fixed top-24 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-blue-950/95 border-2 border-blue-500 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-highway flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl sm:text-4xl p-2 bg-blue-900/80 rounded-xl border border-blue-400">
+        🛣️
+      </div>
+      <div>
+        <h3 id="highway-alert-title" class="text-xs sm:text-sm font-black text-blue-300 uppercase tracking-wider">අධිවේගී මාර්ගය: Seat Belts පළඳින්න!</h3>
+        <p id="highway-alert-desc" class="text-[11px] sm:text-xs text-blue-100 font-medium">සියලුම මගීන් Seat Belts පැළඳ ඇති බව තහවුරු කරගන්න.</p>
+      </div>
+    </div>
+    <span class="text-2xl">💺</span>
   </div>
 
   <!-- ================= TOP TURN BANNER (ACTIVE NAVIGATION) ================= -->
@@ -94,7 +115,7 @@
     </div>
   </div>
 
-  <!-- ================= TRIP BRIEFING MODAL ================= -->
+  <!-- ================= ADVANCED TRIP BRIEFING MODAL ================= -->
   <div id="briefing-modal" class="hidden fixed inset-0 z-[10000] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
     <div class="bg-slate-900 border border-slate-700 max-w-lg w-full rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto custom-scrollbar">
       
@@ -104,7 +125,7 @@
           <span class="text-2xl">📋</span>
           <div>
             <h3 id="modal-title" class="text-sm sm:text-base font-bold text-white tracking-wide">Pre-Departure Safety & Trip Briefing</h3>
-            <p class="text-[10px] text-slate-400" id="modal-subtitle">ගමනට පෙර ආරක්ෂිත පරීක්ෂාව සහ විස්තරය</p>
+            <p class="text-[10px] text-slate-400" id="modal-subtitle">ගමනට පෙර ආරක්ෂිත පරීක්ෂාව සහ හඬ විස්තරය</p>
           </div>
         </div>
         <button onclick="closeBriefingModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
@@ -143,7 +164,7 @@
       <!-- 3. ROAD PROFILE & SPEED ADVISORY -->
       <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-xl space-y-1.5">
         <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5" id="modal-lbl-roads-title">
-          <span>🛣️</span> Road Conditions & Speed Limit Notice
+          <span>🛣️</span> Road Conditions & Highway Advisory
         </span>
         <p id="modal-roads-desc" class="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-700/60">
           මාර්ග තත්ත්වය විශ්ලේෂණය කරමින්...
@@ -202,7 +223,7 @@
       </div>
 
       <span id="gps-status" class="text-[10px] sm:text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2 sm:px-3 py-1 rounded-full flex items-center gap-1">
-        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> GPS Loading...
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Ready
       </span>
     </div>
   </header>
@@ -223,7 +244,7 @@
     <!-- Sidebar Dashboard -->
     <aside id="sidebar-panel" class="w-full h-[48%] lg:h-full lg:w-[420px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-3 sm:p-5 flex flex-col gap-3.5 overflow-y-auto custom-scrollbar z-20 nav-transition">
       
-      <!-- Input Section (Search Destination) -->
+      <!-- Input Section -->
       <div class="bg-slate-800/80 p-3 sm:p-4 rounded-xl border border-slate-700 space-y-2.5">
         <label id="lbl-plan-trip" class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">ගමනාන්තය තෝරන්න</label>
         
@@ -244,7 +265,7 @@
             <input 
               id="destination-input" 
               type="text" 
-              placeholder="උදා: Maharagama, Colombo Fort, Kandy, Galle..."
+              placeholder="උදා: Galle, Maharagama, Kandy, Matara..."
               class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
               onkeypress="if(event.key === 'Enter') planRoute()"
             />
@@ -365,7 +386,8 @@
     let destinationDisplayName = "";
     let liveWeatherData = null;
 
-    const SPEED_LIMIT_KMH = 70;
+    let currentSpeedLimit = 70; // Default Arterial limit
+    let hasAlertedHighwaySeatbelt = false; // Highway alert flag
     let lastSpeedWarningTime = 0;
 
     function formatDistance(meters, lang) {
@@ -406,14 +428,14 @@
         exit: "නවත්වන්න",
         selected: "තෝරා ඇත",
         switch: "මාරු වන්න",
-        modalTitle: "ගමනට පෙර ආරක්ෂිත පරීක්ෂාව සහ විස්තරය",
-        modalSubtitle: "Seat Belt, කාලගුණය සහ මාර්ග තත්ත්ව උපදෙස්",
+        modalTitle: "ගමනට පෙර ආරක්ෂිත පරීක්ෂාව සහ හඬ විස්තරය",
+        modalSubtitle: "Seat Belt, කාලගුණය සහ අධිවේගී මාර්ග උපදෙස්",
         modalProceed: "ගමන අරඹන්න",
         modalCancel: "අවලංගු කරන්න",
         seatbeltTitle: "⚠️ කරුණාකර Seat Belt පළඳින්න",
-        seatbeltDesc: "ගමන ආරම්භ කිරීමට පෙර ඔබගේ Seat Belt (ආරක්ෂිත පටිය) තහවුරු කරගන්න. වේග සීමාවන්ට අනුකූලව ධාවනය කරන්න.",
+        seatbeltDesc: "ගමන ආරම්භ කිරීමට පෙර ඔබගේ Seat Belt (ආරක්ෂිත පටිය) තහවුරු කරගන්න. නීත්‍යානුකූලව ධාවනය කරන්න.",
         weatherTitle: "🌦️ සජීවී කාලගුණික උපදෙස්",
-        roadsTitle: "🛣️ මාර්ග සහ වේග සීමා උපදෙස්",
+        roadsTitle: "🛣️ මාර්ග සහ අධිවේගී උපදෙස්",
         speedWarnTitle: "අවධානය: වේගය අධිකයි!",
         speedWarnDesc: "අවදානම් වේගයක් අනාවරණය විය. කරුණාකර වේගය අඩු කරන්න."
       },
@@ -438,14 +460,14 @@
         exit: "Exit",
         selected: "Selected",
         switch: "Switch",
-        modalTitle: "Pre-Departure Safety & Trip Briefing",
-        modalSubtitle: "Seat belt, climate & road condition advisory",
+        modalTitle: "Pre-Departure Safety & Voice Briefing",
+        modalSubtitle: "Seat belt, climate & expressway guidance",
         modalProceed: "Start Navigation",
         modalCancel: "Cancel",
         seatbeltTitle: "⚠️ Fasten Your Seat Belt",
-        seatbeltDesc: "Please fasten your seat belt before departing. Maintain safe speed limits and obey traffic signals.",
+        seatbeltDesc: "Please fasten your seat belt before departing. Obey statutory speed regulations.",
         weatherTitle: "🌦️ Live Climate & Weather Advisory",
-        roadsTitle: "🛣️ Road Profile & Speed Advisory",
+        roadsTitle: "🛣️ Road Profile & Expressway Advisory",
         speedWarnTitle: "Caution: Speed Exceeded!",
         speedWarnDesc: "High risk speed detected. Please slow down immediately."
       }
@@ -502,7 +524,6 @@
     }
 
     function initMap() {
-      // Default view over Western Province Sri Lanka
       map = L.map('map', { zoomControl: false }).setView([6.9271, 79.8612], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -530,11 +551,36 @@
       }
     }
 
-    function monitorVehicleSpeed(speedKmh) {
+    // Speed & Highway Safety Monitor
+    function monitorVehicleSpeed(speedKmh, stepName = "") {
       const banner = document.getElementById('overspeed-banner');
       document.getElementById('warn-speed-val').innerText = `${speedKmh} km/h`;
 
-      if (speedKmh > SPEED_LIMIT_KMH) {
+      // Check if road is Highway/Expressway (E01, E02, Expressway, Southern Expressway, etc.)
+      const isHighway = stepName.toLowerCase().includes("expressway") || 
+                        stepName.toLowerCase().includes("highway") || 
+                        stepName.startsWith("e0") || 
+                        speedKmh > 75;
+
+      currentSpeedLimit = isHighway ? 100 : 70;
+      document.getElementById('speed-limit-badge').innerText = `Limit: ${currentSpeedLimit}`;
+
+      // Highway specific seatbelt reminder trigger
+      if (isHighway && !hasAlertedHighwaySeatbelt) {
+        hasAlertedHighwaySeatbelt = true;
+        const highwayBanner = document.getElementById('highway-banner');
+        highwayBanner.classList.remove('hidden');
+
+        const highwayVoice = currentLang === 'si'
+          ? "අවධානය දෙන්න! ඉදිරියෙන් අධිවේගී මාර්ගය ආරම්භ වේ. රියදුරු සහ සියලුම මගීන් Seat Belts නිවැරදිව පැළඳ ඇති බව තහවුරු කරගන්න. වේග සීමාව 100 km/h කි."
+          : "Attention! Entering Expressway corridor. Ensure all passengers are wearing seat belts. Maintain highway speed limits.";
+        speakPrompt(highwayVoice, currentLang);
+
+        setTimeout(() => highwayBanner.classList.add('hidden'), 8000);
+      }
+
+      // Over-speed danger check
+      if (speedKmh > currentSpeedLimit) {
         banner.classList.remove('hidden');
         const now = Date.now();
         if (now - lastSpeedWarningTime > 15000) {
@@ -567,7 +613,8 @@
             document.getElementById('live-speed').innerText = `${speedKmh} km/h`;
 
             if (navigationActive) {
-              monitorVehicleSpeed(speedKmh);
+              const currentStep = currentRouteSteps[currentStepIndex] || {};
+              monitorVehicleSpeed(speedKmh, currentStep.name || "");
             }
 
             statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Active`;
@@ -586,7 +633,7 @@
             console.warn("GPS fallback:", err.message);
             statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> GPS Default`;
             if (!userCoords) {
-              userCoords = [6.9271, 79.8612]; // Colombo fallback
+              userCoords = [6.9271, 79.8612];
               updateUserLocationMarker(userCoords);
               document.getElementById('current-location-text').innerText = `6.9271, 79.8612 (Default)`;
               fetchLiveWeather(6.9271, 79.8612);
@@ -632,26 +679,33 @@
       }
     }
 
-    // Dynamic Multi-Node Road Synthesizer (Ensures 100% execution even if external routing servers are busy)
+    // Dynamic Multi-Node Road Synthesizer with Expressway Segments
     function buildAdaptiveRoute(start, end, destName) {
       const distanceMeters = calculateDistanceMeters(start, end) * 1.25;
       const durationSeconds = Math.round((distanceMeters / 1000) * 110);
 
-      // Generate 25 smooth interpolation points
       const count = 25;
       const coords = [];
       const steps = [];
 
+      const isLongTrip = distanceMeters > 30000;
+
       for (let i = 0; i <= count; i++) {
         const t = i / count;
-        // Natural curve deflection
         const curvature = Math.sin(t * Math.PI) * 0.005;
         const lat = start[0] + (end[0] - start[0]) * t + curvature;
         const lon = start[1] + (end[1] - start[1]) * t;
         coords.push([lon, lat]);
 
         if (i < count) {
-          let stepName = i === 0 ? "Main Corridor" : (i === count - 1 ? `${destName} Arrival` : "Connecting Road");
+          let stepName = "Main Corridor";
+          // Inject Expressway segment in middle of long trips
+          if (isLongTrip && i >= 6 && i <= 18) {
+            stepName = "Southern Expressway (E01)";
+          } else if (i === count - 1) {
+            stepName = `${destName} Arrival`;
+          }
+
           let mod = (i % 6 === 0) ? "right" : ((i % 6 === 3) ? "left" : "straight");
           steps.push({
             name: stepName,
@@ -690,7 +744,6 @@
       btn.disabled = true;
 
       try {
-        // Geocode destination in Sri Lanka
         const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destQuery)}&countrycodes=lk&limit=1`;
         const geoRes = await fetch(geocodeUrl);
         const geoData = await geoRes.json();
@@ -708,11 +761,10 @@
         if (destMarker) map.removeLayer(destMarker);
         destMarker = L.marker(destCoords).addTo(map).bindPopup(`<b>${destinationDisplayName}</b>`).openPopup();
 
-        // Query OSRM Driving Engine with timeout
         let routesFound = null;
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout for fast response
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
 
           const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${userCoords[1]},${userCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
           const res = await fetch(osrmUrl, { signal: controller.signal });
@@ -726,7 +778,6 @@
           console.warn("OSRM Server busy/timed out, deploying dynamic road engine.");
         }
 
-        // Guaranteed fallback if public OSRM is slow or offline
         if (!routesFound || routesFound.length === 0) {
           routesFound = [buildAdaptiveRoute(userCoords, destCoords, destinationDisplayName)];
         }
@@ -909,7 +960,7 @@
       document.getElementById('ai-result-panel').classList.remove('hidden');
     }
 
-    // Modal Pre-Departure Briefing
+    // Modal Pre-Departure Briefing with Full Voice Instructions
     function openBriefingModal(isSim) {
       pendingSimulationFlag = isSim;
       const route = allAvailableRoutes[selectedRouteIndex];
@@ -941,12 +992,12 @@
       let weatherAdvice = "";
       if (currentLang === 'si') {
         weatherAdvice = hasRain 
-          ? `දැනට උෂ්ණත්වය සෙල්සියස් අංශක ${temp} කි. වැසි සහිත තත්ත්වයක් පවතින බැවින් මාර්ග ලිස්සන සුළු විය හැක. වේගය පාලනය කර තිරිංග තද කරන්න.`
-          : `දැනට උෂ්ණත්වය සෙල්සියස් අංශක ${temp} කි. වියළි, සාමාන්‍ය කාලගුණයක් පවතින අතර සුළඟේ වේගය ${windSpeed} km/h කි.`;
+          ? `දැනට උෂ්ණත්වය සෙල්සියස් අංශක ${temp} කි. වැසි සහිත තත්ත්වයක් පවතින බැවින් මාර්ග ලිස්සන සුළු විය හැක. තිරිංග තද කිරීමේදී සැලකිලිමත් වන්න.`
+          : `දැනට උෂ්ණත්වය සෙල්සියස් අංශක ${temp} කි. වියළි, සාමාන්‍ය කාලගුණයක් පවතියි.`;
       } else {
         weatherAdvice = hasRain
-          ? `Current temperature is ${temp}°C. Rainy conditions detected; asphalt may be slippery. Reduce speed and brake gently.`
-          : `Current temperature is ${temp}°C. Clear and dry driving conditions with ${windSpeed} km/h wind.`;
+          ? `Current temperature is ${temp}°C. Rainy conditions detected; roads may be slippery. Reduce speed and brake gently.`
+          : `Current temperature is ${temp}°C. Clear and dry driving conditions.`;
       }
       document.getElementById('modal-weather-desc').innerText = weatherAdvice;
 
@@ -954,20 +1005,21 @@
       const isLongDistance = route.distance > 25000;
       if (currentLang === 'si') {
         roadAdvice = isLongDistance 
-          ? `දිගු දුර ධාවනයකි. නීත්‍යානුකූල වේග සීමාව වන උපරිම 70 km/h නොඉක්මවන්න. අනවශ්‍ය අධික වේගයෙන් වැළකී ආරක්ෂිතව ධාවනය කරන්න.`
-          : `නාගරික මාර්ග ඔස්සේ දිවෙන කෙටි ධාවනයකි. පදික මාරුවීම් හා හන්දි බහුල බැවින් වේගය පාලනය කර ධාවනය කරන්න.`;
+          ? `දිගු දුර ධාවනයකි. අධිවේගී මාර්ගයට ඇතුළු වන විට සියලුම මගීන් Seat Belts පැළඳ ඇති බව තහවුරු කරගන්න. වේග සීමාවන් පිළිපදින්න.`
+          : `නගරාසන්න මාර්ග ඔස්සේ දිවෙන කෙටි ධාවනයකි. පදික මාරුවීම් හා සංඥා බහුල බැවින් වේගය පාලනය කරන්න.`;
       } else {
         roadAdvice = isLongDistance
-          ? `Long corridor route. Do not exceed the legal 70 km/h speed threshold. Maintain safe following distance.`
+          ? `Long corridor trip. When entering expressways, verify all passengers are buckled up. Maintain highway speed limits.`
           : `Urban corridor route with frequent crossings. Maintain controlled cruising speed.`;
       }
       document.getElementById('modal-roads-desc').innerText = roadAdvice;
 
-      let briefingMsg = "";
+      // Full Comprehensive Voice Script
+      let fullVoiceBriefing = "";
       if (currentLang === 'si') {
-        briefingMsg = `ගමනට පෙර ඔබගේ ආරක්ෂිත පටිය (Seat Belt) පළඳින්න. අවදානම් අධික වේගයෙන් ධාවනය නොකරන්න. ඔබගේ ගමනාන්තය ${destinationDisplayName} වේ. සම්පූර්ණ දුර ${distInfo.spoken} කි. ${weatherAdvice} ${roadAdvice}`;
+        fullVoiceBriefing = `කරුණාකර ගමන ආරම්භ කිරීමට පෙර ඔබගේ Seat Belt පළඳින්න. ඔබගේ ගමනාන්තය ${destinationDisplayName} වේ. සම්පූර්ණ දුර ${distInfo.spoken} කි. ආසන්න කාලය මිනිත්තු ${durMin} කි. ${weatherAdvice} ${roadAdvice} ආරක්ෂිතව ධාවනය කරන්න.`;
       } else {
-        briefingMsg = `Please fasten your seat belt. Avoid dangerous over-speeding. Your destination is ${destinationDisplayName}. Total distance is ${distInfo.spoken}. ${weatherAdvice} ${roadAdvice}`;
+        fullVoiceBriefing = `Please fasten your seat belt before departing. Destination is ${destinationDisplayName}. Total distance is ${distInfo.spoken} taking about ${durMin} minutes. ${weatherAdvice} ${roadAdvice} Drive safely.`;
       }
 
       document.getElementById('modal-briefing-text').innerText = currentLang === 'si'
@@ -976,7 +1028,8 @@
 
       document.getElementById('briefing-modal').classList.remove('hidden');
 
-      speakPrompt(briefingMsg, currentLang);
+      // Speak entire safety + weather + trip briefing
+      speakPrompt(fullVoiceBriefing, currentLang);
     }
 
     function closeBriefingModal() {
@@ -999,6 +1052,7 @@
 
       navigationActive = true;
       isSimulating = simulate;
+      hasAlertedHighwaySeatbelt = false; // Reset highway alert for new trip
 
       document.getElementById('nav-banner').classList.remove('hidden');
       document.getElementById('nav-mode-indicator').innerText = simulate ? "● Simulation" : "● Live GPS";
@@ -1043,6 +1097,7 @@
 
       document.getElementById('nav-banner').classList.add('hidden');
       document.getElementById('overspeed-banner').classList.add('hidden');
+      document.getElementById('highway-banner').classList.add('hidden');
       document.getElementById('live-speed').innerText = `0 km/h`;
 
       document.getElementById('main-header').classList.remove('hidden');
@@ -1117,7 +1172,7 @@
       return rem;
     }
 
-    // High Reliability Driving Simulator
+    // High Reliability Driving Simulator with Highway Transition
     function runDrivingSimulation() {
       if (simulationTimer) clearInterval(simulationTimer);
       if (!fullRouteCoords || fullRouteCoords.length === 0) return;
@@ -1144,11 +1199,15 @@
         updateUserLocationMarker(simPoint);
         map.panTo(simPoint, { animate: true, duration: 0.6 });
 
-        const simSpeed = 48 + (simIndex % 4) * 5;
+        // Speed increases along highway segments (middle of trip)
+        const isHighwaySegment = (simIndex >= 6 && simIndex <= 18);
+        const currentStep = currentRouteSteps[currentStepIndex] || {};
+        const simSpeed = isHighwaySegment ? (85 + (simIndex % 4) * 5) : (48 + (simIndex % 3) * 6);
+        
         document.getElementById('live-speed').innerText = `${simSpeed} km/h`;
         document.getElementById('current-location-text').innerText = `${simPoint[0].toFixed(4)}, ${simPoint[1].toFixed(4)} (Simulated)`;
 
-        monitorVehicleSpeed(simSpeed);
+        monitorVehicleSpeed(simSpeed, currentStep.name || (isHighwaySegment ? "Expressway" : ""));
         evaluateTurnSteps(simPoint);
 
         simIndex++;
