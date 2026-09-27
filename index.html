@@ -16,11 +16,20 @@
     #map { height: 100%; width: 100%; z-index: 1; }
     .custom-scrollbar::-webkit-scrollbar { width: 5px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    .pulse-loc {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes pulse-ring {
+      to {
+        box-shadow: 0 0 0 16px rgba(16, 185, 129, 0);
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden font-sans">
 
-  <!-- Live Turn-by-Turn Instruction Banner (සිංහල උපදෙස්) -->
+  <!-- Live Turn-by-Turn Instruction Banner -->
   <div id="nav-banner" class="hidden absolute top-4 left-4 right-4 lg:left-8 lg:right-[440px] z-20 bg-slate-900/95 backdrop-blur-md border border-emerald-500/50 rounded-2xl p-4 shadow-2xl flex items-center justify-between">
     <div class="flex items-center gap-4">
       <div id="nav-icon" class="text-3xl text-emerald-400 font-bold bg-emerald-950/80 p-3 rounded-xl border border-emerald-700/50">
@@ -35,9 +44,11 @@
         </div>
       </div>
     </div>
-    <button onclick="stopNavigation()" class="bg-rose-600/90 hover:bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition">
-      නවත්වන්න
-    </button>
+    <div class="flex items-center gap-2">
+      <button onclick="stopNavigation()" class="bg-rose-600/90 hover:bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition">
+        නවත්වන්න
+      </button>
+    </div>
   </div>
 
   <!-- Header -->
@@ -54,7 +65,7 @@
     
     <div class="flex items-center gap-3">
       <span id="gps-status" class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> GPS සොයමින්...
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> GPS සක්‍රීය වෙමින්...
       </span>
     </div>
   </header>
@@ -75,10 +86,15 @@
         <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">ගමනාන්තය තෝරන්න</label>
         
         <div>
-          <span class="text-[11px] text-slate-400 mb-1 block">ඔබ සිටින ස්ථානය (GPS):</span>
-          <div class="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300">
-            <span class="text-emerald-400">📍</span>
-            <span id="current-location-text" class="truncate font-mono">GPS ස්ථානය සොයමින්...</span>
+          <span class="text-[11px] text-slate-400 mb-1 block">ඔබ සිටින ස්ථානය (Live GPS):</span>
+          <div class="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-lg border border-slate-700 text-xs text-slate-300">
+            <div class="flex items-center gap-2 truncate">
+              <span class="text-emerald-400">📍</span>
+              <span id="current-location-text" class="truncate font-mono">GPS ස්ථානය සොයමින්...</span>
+            </div>
+            <button onclick="forceRefreshGPS()" title="Re-sync GPS" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300 border border-slate-600">
+              🔄 Sync
+            </button>
           </div>
         </div>
 
@@ -131,13 +147,23 @@
           <p id="ai-justification" class="text-xs text-slate-300 leading-relaxed"></p>
         </div>
 
-        <!-- Start Sinhala Navigation Button -->
-        <button 
-          onclick="startTurnByTurnNavigation()"
-          class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2"
-        >
-          <span class="text-lg">🔊</span> සිංහල Navigation අරඹන්න
-        </button>
+        <!-- Navigation Buttons -->
+        <div class="space-y-2">
+          <button 
+            onclick="startTurnByTurnNavigation(false)"
+            class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2"
+          >
+            <span class="text-lg">🔊</span> සැබෑ Live Navigation අරඹන්න
+          </button>
+
+          <!-- Simulation for testing PC/indoor movement -->
+          <button 
+            onclick="startTurnByTurnNavigation(true)"
+            class="w-full bg-indigo-700/80 hover:bg-indigo-600 text-white py-2 rounded-xl text-xs font-medium tracking-wide transition flex items-center justify-center gap-2 border border-indigo-500/40"
+          >
+            <span>🎮</span> Live ධාවන Simulation එකක් බලන්න (PC / Test Mode)
+          </button>
+        </div>
 
         <!-- Turn-by-Turn Steps Preview in Sinhala -->
         <div>
@@ -157,14 +183,18 @@
 
   <script>
     let map, userCoords = null, destCoords = null;
-    let userMarker, destMarker;
+    let userMarker = null, destMarker = null;
     let routeLayers = [];
     let watchId = null;
     let navigationActive = false;
+    let isSimulating = false;
+    let simulationTimer = null;
     let currentRouteSteps = [];
     let currentStepIndex = 0;
+    let fullRouteCoords = [];
     let synth = window.speechSynthesis;
     let sinhalaVoice = null;
+    let lastSpokenInstruction = "";
 
     function initVoices() {
       if ('speechSynthesis' in window) {
@@ -185,57 +215,87 @@
       }).addTo(map);
 
       initVoices();
-      startGPSTracking();
+      startContinuousGPSTracking();
     }
 
-    function startGPSTracking() {
+    // High Precision Watch Position with Cache Clearing
+    function startContinuousGPSTracking() {
       const statusBadge = document.getElementById('gps-status');
-      const locText = document.getElementById('current-location-text');
 
       if ("geolocation" in navigator) {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+
         watchId = navigator.geolocation.watchPosition(
           (pos) => {
-            userCoords = [pos.coords.latitude, pos.coords.longitude];
+            if (isSimulating) return; // Ignore real GPS if user is testing simulation
+
+            const newLat = pos.coords.latitude;
+            const newLng = pos.coords.longitude;
+            userCoords = [newLat, newLng];
+
             const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
             document.getElementById('live-speed').innerText = `${speedKmh} km/h`;
 
             statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> GPS සක්‍රීයයි`;
-            locText.innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)}`;
+            document.getElementById('current-location-text').innerText = `${newLat.toFixed(4)}, ${newLng.toFixed(4)}`;
 
-            if (!userMarker) {
-              userMarker = L.circleMarker(userCoords, {
-                radius: 9,
-                fillColor: '#10b981',
-                color: '#ffffff',
-                weight: 3,
-                opacity: 1,
-                fillOpacity: 1
-              }).addTo(map);
-              map.setView(userCoords, 14);
-            } else {
-              userMarker.setLatLng(userCoords);
-            }
+            updateUserLocationMarker(userCoords);
 
+            // If navigating, follow user on map and check next turn
             if (navigationActive) {
-              map.setView(userCoords, 18);
+              map.panTo(userCoords, { animate: true, duration: 0.5 });
               evaluateTurnSteps(userCoords);
             }
           },
           (err) => {
-            console.warn("GPS error/fallback:", err.message);
-            userCoords = [6.9271, 79.8612];
-            statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-400"></span> පෙරනිමි (කොළඹ)`;
-            locText.innerText = `6.9271, 79.8612 (කොළඹ)`;
+            console.warn("GPS error:", err.message);
+            statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> GPS සංඥා දුර්වලයි`;
+            if (!userCoords) {
+              userCoords = [6.9271, 79.8612]; // Fallback to Colombo if completely blocked
+              updateUserLocationMarker(userCoords);
+            }
           },
-          { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0, // Force fresh live reading, don't use cache
+            timeout: 10000
+          }
         );
+      }
+    }
+
+    function forceRefreshGPS() {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          userCoords = [pos.coords.latitude, pos.coords.longitude];
+          updateUserLocationMarker(userCoords);
+          map.setView(userCoords, 16);
+          document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)}`;
+        }, null, { enableHighAccuracy: true, maximumAge: 0 });
+      }
+    }
+
+    function updateUserLocationMarker(coords) {
+      if (!userMarker) {
+        userMarker = L.circleMarker(coords, {
+          radius: 9,
+          fillColor: '#10b981',
+          color: '#ffffff',
+          weight: 3,
+          opacity: 1,
+          fillOpacity: 1,
+          className: 'pulse-loc'
+        }).addTo(map);
+        map.setView(coords, 14);
+      } else {
+        userMarker.setLatLng(coords);
       }
     }
 
     async function planRoute() {
       const destQuery = document.getElementById('destination-input').value.trim();
       if (!destQuery) return alert("කරුණාකර ගමනාන්තය ඇතුළත් කරන්න.");
-      if (!userCoords) return alert("GPS තවමත් සූදානම් නැත.");
+      if (!userCoords) return alert("GPS ස්ථානය තහවුරු කරගනිමින් පවතී. මොහොතක් රැඳෙන්න.");
 
       const btn = document.getElementById('btn-search');
       btn.innerText = "සොයමින්...";
@@ -247,7 +307,7 @@
         const geoData = await geoRes.json();
 
         if (!geoData || geoData.length === 0) {
-          alert("ස්ථානය සොයා ගත නොහැක. කරුණාකර වෙනත් නමක් ලබා දෙන්න.");
+          alert("ස්ථානය සොයා ගත නොහැක.");
           return;
         }
 
@@ -302,9 +362,9 @@
 
       currentRouteSteps = route.legs[0].steps;
       currentStepIndex = 0;
+      fullRouteCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
 
-      const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-      const polyline = L.polyline(coords, { color: '#10b981', weight: 6, opacity: 0.9 }).addTo(map);
+      const polyline = L.polyline(fullRouteCoords, { color: '#10b981', weight: 6, opacity: 0.9 }).addTo(map);
       routeLayers.push(polyline);
       map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
 
@@ -317,17 +377,16 @@
       document.getElementById('ai-congestion').className = `text-xl font-bold ${isPeak ? 'text-rose-400' : 'text-emerald-400'}`;
 
       document.getElementById('ai-justification').innerText = isPeak 
-        ? `දැනට කාර්යබහුල වේලාවක් (Rush Hour) පවතින බැවින් ප්‍රධාන හන්දි වල මාර්ග තදබදය මඟහැරෙන පරිදි මෙම කෙටිම මාර්ගය තෝරා දී ඇත. නිරවද්‍යතාව ${accuracy}% කි.`
-        : `අඩු තදබදයක් සහිත වේලාවකි. ඉන්ධන කාර්යක්ෂමතාව සහ අවම කාලය සැලකිල්ලට ගෙන වඩාත්ම සුමට මාර්ගය තෝරා දී ඇත. නිරවද්‍යතාව ${accuracy}% කි.`;
+        ? `දැනට කාර්යබහුල වේලාවක් (Rush Hour) පවතින බැවින් ප්‍රධාන හන්දි වල මාර්ග තදබදය මඟහැරෙන කෙටිම මාර්ගය තෝරා දී ඇත.`
+        : `අඩු තදබදයක් සහිත වේලාවකි. ඉන්ධන කාර්යක්ෂමතාව සහ අවම කාලය සැලකිල්ලට ගෙන වඩාත්ම සුමට මාර්ගය තෝරා දී ඇත.`;
 
       const stepsContainer = document.getElementById('steps-list');
       stepsContainer.innerHTML = '';
       currentRouteSteps.forEach((st, i) => {
-        const sinhalaText = translateToSinhala(st);
         const item = document.createElement('div');
         item.className = "text-xs bg-slate-800 p-2.5 rounded-lg border border-slate-700/60 flex items-center justify-between";
         item.innerHTML = `
-          <span>${i + 1}. ${sinhalaText}</span>
+          <span>${i + 1}. ${translateToSinhala(st)}</span>
           <span class="text-slate-400 font-mono">${Math.round(st.distance)} මී.</span>
         `;
         stepsContainer.appendChild(item);
@@ -336,21 +395,30 @@
       document.getElementById('ai-result-panel').classList.remove('hidden');
     }
 
-    function startTurnByTurnNavigation() {
+    function startTurnByTurnNavigation(simulate = false) {
       navigationActive = true;
+      isSimulating = simulate;
       document.getElementById('nav-banner').classList.remove('hidden');
       map.setView(userCoords, 18);
 
       speakSinhala("මාර්ග සංචලනය ආරම්භ කළා. සිතියම ඔස්සේ ඉදිරියට ධාවනය කරන්න.");
       updateNavigationDisplay();
+
+      if (simulate) {
+        runDrivingSimulation();
+      }
     }
 
     function stopNavigation() {
       navigationActive = false;
+      isSimulating = false;
+      if (simulationTimer) clearInterval(simulationTimer);
       document.getElementById('nav-banner').classList.add('hidden');
+      document.getElementById('live-speed').innerText = `0 km/h`;
       speakSinhala("මාර්ග සංචලනය නැවැත්තුවා.");
     }
 
+    // Dynamic Turn Tracking
     function evaluateTurnSteps(currentLoc) {
       if (!currentRouteSteps || currentRouteSteps.length === 0) return;
 
@@ -360,9 +428,13 @@
 
       document.getElementById('nav-step-dist').innerText = `${Math.round(distToTurn)} මීටර්`;
 
-      if (distToTurn < 25 && currentStepIndex < currentRouteSteps.length - 1) {
+      // 30 meters threshold to advance to next step
+      if (distToTurn < 30 && currentStepIndex < currentRouteSteps.length - 1) {
         currentStepIndex++;
         updateNavigationDisplay();
+      } else if (distToTurn < 80 && distToTurn > 65) {
+        // Voice reminder when approaching turn
+        speakSinhala(`තව මීටර් ${Math.round(distToTurn)}කින් ${translateToSinhala(currentStep)}`);
       }
     }
 
@@ -380,7 +452,41 @@
       else if (step.maneuver.type.includes('roundabout')) iconBox.innerText = '🔄';
       else iconBox.innerText = '⬆️';
 
-      speakSinhala(sinhalaInstruction);
+      if (lastSpokenInstruction !== sinhalaInstruction) {
+        speakSinhala(sinhalaInstruction);
+        lastSpokenInstruction = sinhalaInstruction;
+      }
+    }
+
+    // Driving Simulation Mode (Ideal for testing live movement indoors or on PC)
+    function runDrivingSimulation() {
+      let simIndex = 0;
+      if (!fullRouteCoords || fullRouteCoords.length === 0) return;
+
+      if (simulationTimer) clearInterval(simulationTimer);
+
+      simulationTimer = setInterval(() => {
+        if (!navigationActive || simIndex >= fullRouteCoords.length) {
+          clearInterval(simulationTimer);
+          if (navigationActive) {
+            speakSinhala("ඔබ ගමනාන්තයට ළඟා වී ඇත.");
+            stopNavigation();
+          }
+          return;
+        }
+
+        const simPoint = fullRouteCoords[simIndex];
+        userCoords = simPoint;
+        updateUserLocationMarker(simPoint);
+        map.panTo(simPoint, { animate: true, duration: 0.8 });
+
+        // Simulate 45 km/h driving speed
+        document.getElementById('live-speed').innerText = `45 km/h`;
+        document.getElementById('current-location-text').innerText = `${simPoint[0].toFixed(4)}, ${simPoint[1].toFixed(4)} (Simulated)`;
+
+        evaluateTurnSteps(simPoint);
+        simIndex++;
+      }, 1200); // Advances coordinates every 1.2s
     }
 
     function speakSinhala(text) {
@@ -389,12 +495,7 @@
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'si-LK';
         utterance.rate = 0.95;
-        utterance.pitch = 1.0;
-        
-        if (sinhalaVoice) {
-          utterance.voice = sinhalaVoice;
-        }
-
+        if (sinhalaVoice) utterance.voice = sinhalaVoice;
         synth.speak(utterance);
       }
     }
