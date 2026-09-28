@@ -21,10 +21,19 @@
       overflow: hidden;
       background-color: #020617;
     }
-    #map { height: 100%; width: 100%; z-index: 10; }
+    #map { height: 100%; width: 100%; z-index: 10; transition: transform 0.3s ease; }
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     
+    /* Driver Perspective 3D Tilt View */
+    .driver-perspective {
+      perspective: 1000px;
+    }
+    .driver-perspective #map {
+      transform: rotateX(48deg) scale(1.18);
+      transform-origin: 50% 85%;
+    }
+
     .pulse-loc {
       box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8);
       animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
@@ -48,6 +57,9 @@
     }
     .nav-transition {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .arrow-icon-wrapper {
+      transition: transform 0.2s ease-out;
     }
   </style>
 </head>
@@ -95,7 +107,7 @@
     <span class="text-2xl">💺</span>
   </div>
 
-  <!-- ================= TOP TURN BANNER (HIGH CONTRAST BLACK FONTS) ================= -->
+  <!-- ================= TOP TURN BANNER ================= -->
   <div id="nav-banner" class="hidden fixed top-2 left-2 right-2 sm:left-4 sm:right-4 lg:right-[430px] z-[9999] bg-slate-900/98 backdrop-blur-md border border-emerald-500/60 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2.5">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-3 min-w-0">
@@ -114,7 +126,7 @@
       <button onclick="stopNavigation()" class="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition shadow-md" id="banner-btn-stop">Exit</button>
     </div>
 
-    <!-- ETA සහ Remaining Distance පැහැදිලි Black Fonts සහිතව -->
+    <!-- ETA and Remaining Display with Crisp Black Fonts on High-contrast Pills -->
     <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs gap-2">
       <div class="bg-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-400 flex items-center gap-1.5 shadow-sm">
         <span class="text-black font-semibold text-[11px]" id="banner-lbl-rem">Remaining:</span>
@@ -157,7 +169,14 @@
     
     <div id="map-container" class="w-full h-[52%] lg:h-full lg:flex-1 relative z-10 nav-transition">
       <div id="map"></div>
-      <button onclick="centerOnUser()" class="absolute bottom-4 right-4 z-[500] bg-slate-900/90 text-white p-2.5 rounded-xl border border-slate-700 shadow-xl text-lg hover:bg-slate-800">🎯</button>
+      
+      <!-- Floating Compass / North Toggle & Center Controls -->
+      <div class="absolute bottom-4 right-4 z-[500] flex flex-col gap-2">
+        <button id="btn-north" onclick="toggleNorthOrientation()" title="North Orientation Toggle" class="bg-slate-900/90 text-white w-11 h-11 rounded-xl border border-slate-700 shadow-xl flex items-center justify-center font-bold text-sm hover:bg-slate-800 transition">
+          <span id="north-pointer" class="transition-transform duration-300">🧭 N</span>
+        </button>
+        <button onclick="centerOnUser()" class="bg-slate-900/90 text-white w-11 h-11 rounded-xl border border-slate-700 shadow-xl flex items-center justify-center text-lg hover:bg-slate-800">🎯</button>
+      </div>
     </div>
 
     <aside id="sidebar-panel" class="w-full h-[48%] lg:h-full lg:w-[420px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-3 sm:p-5 flex flex-col gap-3.5 overflow-y-auto custom-scrollbar z-20 nav-transition">
@@ -241,7 +260,7 @@
     let destCoords = null;
     let userMarker = null;
     let singleDestMarker = null;
-    let vehicleMarker = null;
+    let arrowMarker = null;
     let routeLayers = [];
     let watchId = null;
     let navigationActive = false;
@@ -259,8 +278,9 @@
     let hasAlertedHighwaySeatbelt = false;
     let lastSpeedWarningTime = 0;
     let lastSpokenStepIndex = -1;
+    let currentHeading = 0;
+    let isNorthLocked = false;
 
-    // Smart Hazard & Zone Trackers
     let firedEvents = {
       trafficLight: false,
       schoolZone: false,
@@ -374,6 +394,16 @@
       }
     }
 
+    function calculateBearing(startLat, startLng, destLat, destLng) {
+      const toRad = deg => deg * (Math.PI / 180);
+      const toDeg = rad => rad * (180 / Math.PI);
+      const y = Math.sin(toRad(destLng - startLng)) * Math.cos(toRad(destLat));
+      const x = Math.cos(toRad(startLat)) * Math.sin(toRad(destLat)) -
+                Math.sin(toRad(startLat)) * Math.cos(toRad(destLat)) * Math.cos(toRad(destLng - startLng));
+      let brng = toDeg(Math.atan2(y, x));
+      return (brng + 360) % 360;
+    }
+
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([6.9271, 79.8612], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -381,6 +411,53 @@
 
       startContinuousGPSTracking();
       setTimeout(() => map.invalidateSize(), 500);
+    }
+
+    function toggleNorthOrientation() {
+      isNorthLocked = !isNorthLocked;
+      const ptr = document.getElementById('north-pointer');
+      const btn = document.getElementById('btn-north');
+      
+      if (isNorthLocked) {
+        btn.classList.add('border-emerald-500', 'bg-emerald-950');
+        ptr.style.transform = `rotate(0deg)`;
+        if (map && userCoords) map.setView(userCoords, map.getZoom(), { animate: true });
+      } else {
+        btn.classList.remove('border-emerald-500', 'bg-emerald-950');
+        ptr.style.transform = `rotate(${currentHeading}deg)`;
+      }
+    }
+
+    function updateArrowMarker(coords, angle) {
+      currentHeading = angle;
+      const ptr = document.getElementById('north-pointer');
+      if (ptr && !isNorthLocked) {
+        ptr.style.transform = `rotate(${angle}deg)`;
+      }
+
+      // 3D Directional Blue Arrow Icon
+      const arrowSvg = `
+        <div class="arrow-icon-wrapper" style="transform: rotate(${angle}deg); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+          <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.6));">
+            <circle cx="50" cy="50" r="46" fill="#0f172a" fill-opacity="0.8" stroke="#38bdf8" stroke-width="4"/>
+            <path d="M50 14 L78 78 L50 62 L22 78 Z" fill="#0284c7" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      `;
+
+      const customArrowIcon = L.divIcon({
+        html: arrowSvg,
+        className: '',
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+
+      if (!arrowMarker) {
+        arrowMarker = L.marker(coords, { icon: customArrowIcon, zIndexOffset: 1000 }).addTo(map);
+      } else {
+        arrowMarker.setLatLng(coords);
+        arrowMarker.setIcon(customArrowIcon);
+      }
     }
 
     function getFemaleVoice() {
@@ -419,7 +496,6 @@
       }
     }
 
-    // Dynamic Zone / Hazard Alerts Display
     function triggerZoneAlert(type, titleSi, titleEn, descSi, descEn, badgeText, icon, voiceSi, voicePhonetic, voiceEn) {
       const banner = document.getElementById('zone-banner');
       banner.classList.remove('hidden');
@@ -448,7 +524,6 @@
                            && !normalized.includes("high level") 
                            && !normalized.includes("a4");
 
-      // Dynamic Speed Limit Logic based on Zones & Roads
       if (activeZone === "school") {
         currentSpeedLimit = 30;
       } else if (activeZone === "heavy_traffic") {
@@ -499,12 +574,20 @@
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
             const isFirst = (userCoords === null);
+            const prevCoords = userCoords;
             userCoords = [lat, lng];
 
             statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Active`;
             document.getElementById('current-location-text').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)} (Phone GPS)`;
 
-            updateUserLocationMarker(userCoords);
+            let heading = 0;
+            if (pos.coords.heading !== null && !isNaN(pos.coords.heading)) {
+              heading = pos.coords.heading;
+            } else if (prevCoords) {
+              heading = calculateBearing(prevCoords[0], prevCoords[1], lat, lng);
+            }
+
+            updateArrowMarker(userCoords, heading);
 
             if (isFirst && map) {
               map.setView(userCoords, 14);
@@ -532,7 +615,7 @@
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
           userCoords = [pos.coords.latitude, pos.coords.longitude];
-          updateUserLocationMarker(userCoords);
+          updateArrowMarker(userCoords, currentHeading);
           map.setView(userCoords, 16);
           document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)} (Phone GPS)`;
         }, null, { enableHighAccuracy: true, maximumAge: 0 });
@@ -541,14 +624,6 @@
 
     function centerOnUser() {
       if (userCoords) map.setView(userCoords, navigationActive ? 18 : 15);
-    }
-
-    function updateUserLocationMarker(coords) {
-      if (!userMarker) {
-        userMarker = L.circleMarker(coords, { radius: 9, fillColor: '#10b981', color: '#fff', weight: 3, fillOpacity: 1, className: 'pulse-loc' }).addTo(map);
-      } else {
-        userMarker.setLatLng(coords);
-      }
     }
 
     async function planRoute() {
@@ -761,8 +836,6 @@
       isSimulating = simulate;
       hasAlertedHighwaySeatbelt = false;
       lastSpokenStepIndex = -1;
-
-      // Reset intelligent road hazard trackers
       firedEvents = { trafficLight: false, schoolZone: false, hospitalZone: false, tollGate: false };
 
       const activeRoute = allAvailableRoutes[selectedRouteIndex];
@@ -780,14 +853,13 @@
 
       document.getElementById('sidebar-panel').classList.add('hidden');
       document.getElementById('main-header').classList.add('hidden');
-      document.getElementById('map-container').classList.replace('h-[52%]', 'h-full');
+      
+      // Driver perspective 3D tilted view enable
+      const mapContainer = document.getElementById('map-container');
+      mapContainer.classList.replace('h-[52%]', 'h-full');
+      mapContainer.classList.add('driver-perspective');
 
-      if (!vehicleMarker) {
-        const carIcon = L.divIcon({ html: '<div style="font-size: 26px; transform: translate(-13px, -13px);">🚗</div>', className: '', iconSize: [26, 26] });
-        vehicleMarker = L.marker(userCoords, { icon: carIcon }).addTo(map);
-      } else {
-        vehicleMarker.setLatLng(userCoords);
-      }
+      updateArrowMarker(userCoords, currentHeading);
 
       setTimeout(() => {
         map.invalidateSize();
@@ -820,7 +892,10 @@
 
       document.getElementById('sidebar-panel').classList.remove('hidden');
       document.getElementById('main-header').classList.remove('hidden');
-      document.getElementById('map-container').classList.replace('h-full', 'h-[52%]');
+      
+      const mapContainer = document.getElementById('map-container');
+      mapContainer.classList.replace('h-full', 'h-[52%]');
+      mapContainer.classList.remove('driver-perspective');
 
       setTimeout(() => {
         map.invalidateSize();
@@ -872,7 +947,6 @@
       speakVoice(instruction);
     }
 
-    // Comprehensive Simulation with Traffic Lights, School, Hospital, Toll & 100km/h Highway
     function runDrivingSimulation() {
       if (simulationTimer) clearInterval(simulationTimer);
       if (!fullRouteCoords || fullRouteCoords.length === 0) return;
@@ -894,19 +968,23 @@
         }
 
         const pt = fullRouteCoords[idx];
+        const nextPt = fullRouteCoords[idx + 1] || pt;
         userCoords = pt;
-        if (vehicleMarker) vehicleMarker.setLatLng(pt);
+
+        // Calculate heading for forward moving arrow
+        const bearing = calculateBearing(pt[0], pt[1], nextPt[0], nextPt[1]);
+        updateArrowMarker(pt, bearing);
+
         map.panTo(pt, { animate: true, duration: 0.5 });
 
         const progressPercent = Math.round((idx / fullRouteCoords.length) * 100);
         const activeRoute = allAvailableRoutes[selectedRouteIndex];
         const isHighwayRoute = activeRoute.isHighway;
 
-        // Dynamic Speed, Traffic & Hazard Triggers
         let simSpeed = 52;
         let activeZone = null;
 
-        // 1. Traffic Light Trigger (At 12% of trip)
+        // 1. Traffic Light Trigger
         if (progressPercent >= 12 && progressPercent <= 18) {
           simSpeed = 24;
           document.getElementById('traffic-indicator').innerText = "🟡 Traffic Signal Ahead";
@@ -924,10 +1002,10 @@
             );
           }
         }
-        // 2. School Zone Trigger (At 28% of trip)
+        // 2. School Zone Trigger
         else if (progressPercent >= 28 && progressPercent <= 36) {
           activeZone = "school";
-          simSpeed = 28; // Strict school zone speed
+          simSpeed = 28;
           document.getElementById('traffic-indicator').innerText = "🏫 School Zone: Max 30";
           document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-rose-950 border border-rose-500 text-rose-300 font-bold";
 
@@ -943,10 +1021,10 @@
             );
           }
         }
-        // 3. Highway Toll Gate & Full 100 km/h Highway Corridor (At 42% - 75% of trip on Expressway)
+        // 3. Highway Toll Gate & 100 km/h High-Speed Cruising
         else if (isHighwayRoute && progressPercent >= 42 && progressPercent <= 78) {
           if (progressPercent >= 42 && progressPercent <= 48) {
-            simSpeed = 35; // Slow down at toll booth entry
+            simSpeed = 35;
             document.getElementById('traffic-indicator').innerText = "🛣️ Toll Gate Entry";
             document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-blue-950 border border-blue-500 text-blue-300 font-bold";
 
@@ -962,13 +1040,12 @@
               );
             }
           } else {
-            // Full 100 km/h High-Speed Cruising on Highway
             simSpeed = 100;
             document.getElementById('traffic-indicator').innerText = "⚡ Expressway: 100 km/h";
             document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500 text-emerald-300 font-bold";
           }
         }
-        // 4. Hospital Zone Trigger (At 82% of trip)
+        // 4. Hospital Zone Trigger
         else if (progressPercent >= 82 && progressPercent <= 89) {
           simSpeed = 38;
           document.getElementById('traffic-indicator').innerText = "🏥 Hospital Zone: Silence";
@@ -985,9 +1062,7 @@
               "Hospital zone ahead. Please do not sound horn."
             );
           }
-        }
-        // 5. Normal Roads / Open Corridors
-        else {
+        } else {
           simSpeed = 54;
           document.getElementById('traffic-indicator').innerText = "🟢 Smooth Traffic Flow";
           document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500 text-emerald-300 font-bold";
