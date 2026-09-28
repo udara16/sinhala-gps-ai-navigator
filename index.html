@@ -27,7 +27,7 @@
       height: 100%;
       position: relative;
       overflow: hidden;
-      perspective: 800px;
+      perspective: 900px;
     }
 
     #map { 
@@ -39,11 +39,6 @@
       z-index: 10; 
       transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
       transform-origin: 50% 50%;
-    }
-
-    /* Driver Perspective 3D Tilt View (Road always heading UP) */
-    .driver-heading-up #map {
-      transform-origin: 50% 55%;
     }
 
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -65,6 +60,10 @@
     }
     .nav-transition {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .arrow-container {
+      transition: transform 0.25s linear;
+      transform-origin: center center;
     }
   </style>
 </head>
@@ -131,7 +130,7 @@
       <button onclick="stopNavigation()" class="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition shadow-md" id="banner-btn-stop">Exit</button>
     </div>
 
-    <!-- ETA සහ Remaining Distance (කළු අකුරින් පැහැදිලිව පෙනේ) -->
+    <!-- ETA and Remaining Display (Black on High Contrast) -->
     <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs gap-2">
       <div class="bg-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-400 flex items-center gap-1.5 shadow-sm">
         <span class="text-black font-semibold text-[11px]" id="banner-lbl-rem">Remaining:</span>
@@ -265,7 +264,6 @@
     let map = null;
     let userCoords = null;
     let destCoords = null;
-    let userMarker = null;
     let singleDestMarker = null;
     let arrowMarker = null;
     let routeLayers = [];
@@ -430,16 +428,17 @@
         btn.classList.add('border-emerald-500', 'bg-emerald-950');
         ptr.style.transform = `rotate(0deg)`;
         mapEl.style.transform = `rotate(0deg)`;
+        updateArrowOrientation(currentHeading, true);
       } else {
         btn.classList.remove('border-emerald-500', 'bg-emerald-950');
         ptr.style.transform = `rotate(${currentHeading}deg)`;
         if (navigationActive) {
           mapEl.style.transform = `rotateX(42deg) rotate(${-currentHeading}deg) scale(1.15)`;
+          updateArrowOrientation(currentHeading, false);
         }
       }
     }
 
-    // පාර හැමවිටම උඩ පැත්තට පෙනෙන පරිදි සිතියම භ්‍රමණය කිරීම (Heading-Up)
     function updateMapOrientation(bearing) {
       currentHeading = bearing;
       const ptr = document.getElementById('north-pointer');
@@ -448,7 +447,6 @@
       if (!isNorthLocked) {
         if (ptr) ptr.style.transform = `rotate(${-bearing}deg)`;
         if (navigationActive) {
-          // Driver 3D Tilt View සමඟ පාර ඉදිරියට (උඩට) සිටින සේ rotate කිරීම
           mapEl.style.transform = `rotateX(42deg) rotate(${-bearing}deg) scale(1.15)`;
         } else {
           mapEl.style.transform = `rotate(${-bearing}deg)`;
@@ -459,13 +457,23 @@
       }
     }
 
-    // උඩ පැත්තට යොමු වූ නිල් පැහැති Navigation Arrow Pointer එක
-    function updateArrowMarker(coords) {
+    // ඊතලයේ දිශාව පාරට 100% ක් සමාන්තරව (Parallel to road trajectory) තැබීම
+    function updateArrowOrientation(roadAngle, northMode) {
+      const container = document.getElementById('nav-arrow-element');
+      if (container) {
+        // If map rotates (-currentHeading), the arrow must align parallel to the heading:
+        const renderAngle = northMode ? roadAngle : 0;
+        container.style.transform = `rotate(${renderAngle}deg)`;
+      }
+    }
+
+    function updateArrowMarker(coords, roadAngle) {
+      const renderAngle = isNorthLocked ? roadAngle : 0;
       const arrowSvg = `
-        <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
-          <svg width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 6px 10px rgba(0,0,0,0.7));">
-            <circle cx="50" cy="50" r="45" fill="#0f172a" fill-opacity="0.85" stroke="#38bdf8" stroke-width="4"/>
-            <path d="M50 12 L78 78 L50 62 L22 78 Z" fill="#0284c7" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round"/>
+        <div id="nav-arrow-element" class="arrow-container" style="transform: rotate(${renderAngle}deg); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+          <svg width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 6px 12px rgba(0,0,0,0.8));">
+            <circle cx="50" cy="50" r="46" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="4.5"/>
+            <path d="M50 12 L78 78 L50 62 L22 78 Z" fill="#0284c7" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
           </svg>
         </div>
       `;
@@ -473,14 +481,15 @@
       const customArrowIcon = L.divIcon({
         html: arrowSvg,
         className: '',
-        iconSize: [48, 48],
-        iconAnchor: [24, 24]
+        iconSize: [50, 50],
+        iconAnchor: [25, 25]
       });
 
       if (!arrowMarker) {
         arrowMarker = L.marker(coords, { icon: customArrowIcon, zIndexOffset: 1000 }).addTo(map);
       } else {
         arrowMarker.setLatLng(coords);
+        arrowMarker.setIcon(customArrowIcon);
       }
     }
 
@@ -611,7 +620,7 @@
               heading = calculateBearing(prevCoords[0], prevCoords[1], lat, lng);
             }
 
-            updateArrowMarker(userCoords);
+            updateArrowMarker(userCoords, heading);
             updateMapOrientation(heading);
 
             if (isFirst && map) {
@@ -640,7 +649,7 @@
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
           userCoords = [pos.coords.latitude, pos.coords.longitude];
-          updateArrowMarker(userCoords);
+          updateArrowMarker(userCoords, currentHeading);
           map.setView(userCoords, 16);
           document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)} (Phone GPS)`;
         }, null, { enableHighAccuracy: true, maximumAge: 0 });
@@ -881,9 +890,8 @@
       
       const mapContainer = document.getElementById('map-container');
       mapContainer.classList.replace('h-[52%]', 'h-full');
-      mapContainer.classList.add('driver-heading-up');
 
-      updateArrowMarker(userCoords);
+      updateArrowMarker(userCoords, currentHeading);
 
       setTimeout(() => {
         map.invalidateSize();
@@ -919,7 +927,6 @@
       
       const mapContainer = document.getElementById('map-container');
       mapContainer.classList.replace('h-full', 'h-[52%]');
-      mapContainer.classList.remove('driver-heading-up');
 
       const mapEl = document.getElementById('map');
       mapEl.style.transform = 'rotate(0deg)';
@@ -998,10 +1005,10 @@
         const nextPt = fullRouteCoords[idx + 1] || pt;
         userCoords = pt;
 
-        // පාර හැමවිටම උඩ පැත්තට (Upward) පෙනෙන පරිදි Heading ගණනය කර සිතියම කරකැවීම
-        const bearing = calculateBearing(pt[0], pt[1], nextPt[0], nextPt[1]);
-        updateArrowMarker(pt);
-        updateMapOrientation(bearing);
+        // පාරට 100% සමාන්තරව (Parallel) Bearing කෝණය ගණනය කර Arrow එක සහ Map එක යාවත්කාලීන කිරීම
+        const roadBearing = calculateBearing(pt[0], pt[1], nextPt[0], nextPt[1]);
+        updateArrowMarker(pt, roadBearing);
+        updateMapOrientation(roadBearing);
 
         map.panTo(pt, { animate: true, duration: 0.5 });
 
