@@ -342,40 +342,47 @@
       setTimeout(() => map.invalidateSize(), 500);
     }
 
-    // High Clarity Voice Synthesizer (Clear English & Clean Natural Sinhala)
+    // High Quality Clear Female Voice Synthesizer
+    function getClearFemaleVoice() {
+      if (!('speechSynthesis' in window)) return null;
+      const voices = synth.getVoices();
+      
+      // Preferred female voices across Windows, Mac, Android and Chrome
+      const femaleNames = ["zira", "heera", "kaveri", "samantha", "victoria", "karen", "serena", "female", "google uk english female", "google us english female"];
+      
+      for (let name of femaleNames) {
+        const found = voices.find(v => v.name.toLowerCase().includes(name));
+        if (found) return found;
+      }
+      
+      return voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en')) || voices[0];
+    }
+
     function speakVoice(voiceObject) {
       if (!('speechSynthesis' in window)) return;
       try {
         synth.cancel();
 
-        const voices = synth.getVoices();
-        const hasSinhalaNative = voices.some(v => v.lang.startsWith('si') || v.lang === 'si-LK');
+        const femaleVoice = getClearFemaleVoice();
+        const textToSpeak = (currentLang === 'si') 
+          ? (voiceObject.siPhonetic || voiceObject.siText) 
+          : voiceObject.enText;
 
-        let utterance;
-        if (currentLang === 'si') {
-          if (hasSinhalaNative) {
-            utterance = new SpeechSynthesisUtterance(voiceObject.siText);
-            utterance.lang = 'si-LK';
-          } else {
-            // Clean phonetic English words with natural South Asian cadence
-            utterance = new SpeechSynthesisUtterance(voiceObject.siPhonetic || voiceObject.siText);
-            const indVoice = voices.find(v => v.lang === 'en-IN') || voices.find(v => v.lang.startsWith('en')) || voices[0];
-            if (indVoice) utterance.voice = indVoice;
-            utterance.lang = 'en-IN';
-          }
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        
+        if (femaleVoice) {
+          utterance.voice = femaleVoice;
+          utterance.lang = femaleVoice.lang;
         } else {
-          utterance = new SpeechSynthesisUtterance(voiceObject.enText);
-          const enVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
-          if (enVoice) utterance.voice = enVoice;
-          utterance.lang = 'en-US';
+          utterance.lang = 'en-IN';
         }
 
-        // Slightly relaxed speech rate for maximum clarity
-        utterance.rate = 0.88;
-        utterance.pitch = 1.0;
+        // Soft, clear, slightly higher feminine pitch and relaxed tempo
+        utterance.rate = 0.82;
+        utterance.pitch = 1.15;
         synth.speak(utterance);
       } catch (e) {
-        console.warn("Speech synthesis error:", e);
+        console.warn("Audio synthesis error:", e);
       }
     }
 
@@ -388,13 +395,13 @@
         document.getElementById('weather-title').innerText = currentLang === 'si' ? "කාලගුණ අනතුරු ඇඟවීම: තද වැසි" : "Weather Alert: Heavy Rain";
         document.getElementById('weather-desc').innerText = currentLang === 'si' 
           ? "ඉදිරියෙන් තද වැසි සහිතයි. මාර්ගය ලිස්සන සුළු බැවින් වේගය අඩු කරන්න."
-          : "Heavy rain reported ahead. Slippery road conditions. Please reduce speed.";
+          : "Heavy rain reported ahead. Roads may be slippery. Please slow down.";
         document.getElementById('weather-temp-badge').innerText = "26°C";
 
         speakVoice({
-          siText: "කාලගුණ අනතුරු ඇඟවීමයි! ඉදිරි මාර්ගයේ තද වැසි සහිතයි. කරුණාකර වේගය අඩු කර ධාවනය කරන්න.",
-          siPhonetic: "Kalaguna anathuru aengaveemayi. Idiriyen thada vesi sahithayi. Karunakarala vegaya adu karanna.",
-          enText: "Weather caution! Heavy rain ahead. Roads may be slippery. Please reduce your speed."
+          siText: "කාලගුණ අනතුරු ඇඟවීමයි! ඉදිරියෙන් තද වැසි සහිතයි. කරුණාකර වේගය අඩු කරන්න.",
+          siPhonetic: "Kalaguna anathuruyi. Idiriyen thada vesi. Karunakara vegaya adu karanna.",
+          enText: "Weather alert. Heavy rain reported ahead. Please reduce your speed."
         });
       }
 
@@ -417,9 +424,9 @@
         hasAlertedHighwaySeatbelt = true;
         document.getElementById('highway-banner').classList.remove('hidden');
         speakVoice({
-          siText: "අධිවේගී මාර්ගය ආරම්භ වේ. සියලුම මගීන් Seat Belts පළඳින්න. වේග සීමාව පැයට කිලෝමීටර් 100කි.",
-          siPhonetic: "Adivegi margaya aramba ve. Seat belts paladinna. Vega seemava seeyaki.",
-          enText: "Entering highway corridor. Ensure all passengers are wearing seat belts. Speed limit is 100."
+          siText: "අධිවේගී මාර්ගය ආරම්භ වේ. Seat Belts පළඳින්න. වේග සීමාව 100යි.",
+          siPhonetic: "Adivegi margaya aramba ve. Seat belts paladinna. Vega seemava seeyayi.",
+          enText: "Entering highway corridor. Fasten seat belts. Speed limit is 100."
         });
         setTimeout(() => document.getElementById('highway-banner').classList.add('hidden'), 7000);
       }
@@ -430,9 +437,9 @@
         if (now - lastSpeedWarningTime > 12000) {
           lastSpeedWarningTime = now;
           speakVoice({
-            siText: "අවධානය දෙන්න! ඔබගේ වේගය අධිකයි. කරුණාකර වේගය අඩු කරන්න.",
-            siPhonetic: "Awadhanaya denna. Obage vegaya adikayi. Karunakarala vegaya adu karanna.",
-            enText: "Caution! You are exceeding the speed limit. Please slow down immediately."
+            siText: "අවධානය දෙන්න! වේගය වැඩියි. කරුණාකර වේගය අඩු කරන්න.",
+            siPhonetic: "Awadhanaya denna. Vegaya vadiyi. Karunakara vegaya adu karanna.",
+            enText: "Caution! You are exceeding the speed limit. Please slow down."
           });
         }
       } else {
@@ -536,7 +543,6 @@
         if (singleDestMarker) map.removeLayer(singleDestMarker);
         singleDestMarker = L.marker(destCoords).addTo(map).bindPopup(`<b>${destinationDisplayName}</b>`).openPopup();
 
-        // OSRM Direct Query (Strict Real Roads Snapping)
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${userCoords[1]},${userCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
         const res = await fetch(osrmUrl);
         const data = await res.json();
@@ -672,7 +678,7 @@
       const roadName = step.name ? `(${step.name})` : "";
 
       let siText = "කෙළින්ම ඉදිරියට ධාවනය කරන්න " + roadName;
-      let siPhonetic = "Kelimma idiriyata yanna " + (step.name || "");
+      let siPhonetic = "Kelinnma idiriyata yanna " + (step.name || "");
       let enText = "Continue straight along " + (step.name || "the road");
 
       if (type === "depart") {
@@ -715,10 +721,9 @@
       const activeRoute = allAvailableRoutes[selectedRouteIndex];
       const distInfo = formatDistance(activeRoute.distance, currentLang);
 
-      // Seat belt & initial voice advice
       speakVoice({
-        siText: `කරුණාකර ඔබගේ ආරක්ෂිත පටිය පළඳින්න. ගමනාන්තය ${destinationDisplayName} වේ. මුළු දුර ${distInfo.display} කි. ආරක්ෂිතව ධාවනය කරන්න.`,
-        siPhonetic: `Karunakarala obage seat belt eka paladinna. Gamananthaya ${destinationDisplayName}. Mulu dura ${distInfo.spokenSi}. Arakshithava yanna.`,
+        siText: `කරුණාකර ඔබගේ Seat Belt පළඳින්න. ගමනාන්තය ${destinationDisplayName}. මුළු දුර ${distInfo.display} කි. ආරක්ෂිතව ධාවනය කරන්න.`,
+        siPhonetic: `Karunakara seat belt eka paladinna. Gamananthaya ${destinationDisplayName}. Mulu dura ${distInfo.spokenSi}. Arakshithava yanna.`,
         enText: `Please fasten your seat belt. Destination is ${destinationDisplayName}. Total distance is ${distInfo.spokenEn}. Drive safely.`
       });
 
@@ -794,7 +799,6 @@
 
       document.getElementById('nav-step-dist').innerText = stepDistInfo.display;
 
-      // Upcoming maneuver alert 80 meters prior
       if (distToTurn < 85 && distToTurn > 45 && lastSpokenStepIndex !== currentStepIndex) {
         lastSpokenStepIndex = currentStepIndex;
         const instruction = getStepInstruction(currentStep);
@@ -845,7 +849,6 @@
         if (vehicleMarker) vehicleMarker.setLatLng(pt);
         map.panTo(pt, { animate: true, duration: 0.5 });
 
-        // Trigger weather advisory around 30% into the trip
         if (idx === Math.floor(fullRouteCoords.length * 0.3) && !weatherAlertFired) {
           weatherAlertFired = true;
           triggerWeatherConditionAlert('rain');
