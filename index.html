@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Lanka AI GPS Navigator & Live Weather Engine</title>
+  <title>Lanka AI GPS Navigator & Live Road Intelligence Engine</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -39,19 +39,12 @@
       from { border-color: rgba(239, 68, 68, 0.8); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
       to { border-color: rgba(220, 38, 38, 1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
     }
-    .pulse-weather {
-      animation: weather-glow 1.4s infinite alternate;
+    .pulse-zone {
+      animation: zone-glow 1.2s infinite alternate;
     }
-    @keyframes weather-glow {
-      from { border-color: rgba(14, 165, 233, 0.8); box-shadow: 0 0 12px rgba(14, 165, 233, 0.4); }
-      to { border-color: rgba(56, 189, 248, 1); box-shadow: 0 0 22px rgba(56, 189, 248, 0.8); }
-    }
-    .pulse-highway {
-      animation: highway-glow 1.2s infinite alternate;
-    }
-    @keyframes highway-glow {
-      from { border-color: rgba(59, 130, 246, 0.8); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
-      to { border-color: rgba(37, 99, 235, 1); box-shadow: 0 0 25px rgba(37, 99, 235, 0.9); }
+    @keyframes zone-glow {
+      from { border-color: rgba(245, 158, 11, 0.8); box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); }
+      to { border-color: rgba(217, 119, 6, 1); box-shadow: 0 0 22px rgba(245, 158, 11, 0.8); }
     }
     .nav-transition {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -60,18 +53,18 @@
 </head>
 <body class="text-slate-100 flex flex-col h-full select-none font-sans">
 
-  <!-- ================= WEATHER ALERT POPUP ================= -->
-  <div id="weather-banner" class="hidden fixed top-20 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-sky-950/95 border-2 border-sky-400 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-weather flex items-center justify-between gap-3">
+  <!-- ================= DYNAMIC ROAD HAZARD / ZONE ALERT BANNER ================= -->
+  <div id="zone-banner" class="hidden fixed top-20 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-slate-900/98 border-2 border-amber-400 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-zone flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
-      <div id="weather-icon" class="text-3xl sm:text-4xl p-2 bg-sky-900/80 rounded-xl border border-sky-400">🌧️</div>
+      <div id="zone-icon" class="text-3xl sm:text-4xl p-2 bg-amber-500/20 rounded-xl border border-amber-400">🏫</div>
       <div>
-        <h3 id="weather-title" class="text-xs sm:text-sm font-black text-sky-300 uppercase tracking-wider">කාලගුණ අනතුරු ඇඟවීම</h3>
-        <p id="weather-desc" class="text-[11px] sm:text-xs text-sky-100 font-medium">ඉදිරියෙන් වැසි සහිතයි. මාර්ගය ලිස්සන සුළු විය හැක.</p>
+        <h3 id="zone-title" class="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wider">පාසල් කලාපය (School Zone)</h3>
+        <p id="zone-desc" class="text-[11px] sm:text-xs text-amber-100 font-medium">ඉදිරියෙන් පාසලක් ඇත. වේග සීමාව 30 km/h කි.</p>
       </div>
     </div>
-    <div class="bg-sky-200 border border-sky-400 px-3 py-1.5 rounded-xl text-center shrink-0">
-      <span class="text-[9px] text-sky-900 block uppercase font-bold">Rain Alert</span>
-      <b id="weather-temp-badge" class="text-sm sm:text-base font-black text-black font-mono">27°C</b>
+    <div class="bg-amber-200 border border-amber-400 px-3 py-1.5 rounded-xl text-center shrink-0">
+      <span class="text-[9px] text-amber-900 block uppercase font-bold" id="zone-badge-lbl">Zone Alert</span>
+      <b id="zone-badge-val" class="text-sm sm:text-base font-black text-black font-mono">30 km/h</b>
     </div>
   </div>
 
@@ -91,7 +84,7 @@
   </div>
 
   <!-- ================= HIGHWAY SEAT BELT BANNER ================= -->
-  <div id="highway-banner" class="hidden fixed top-20 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-blue-950/95 border-2 border-blue-500 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-highway flex items-center justify-between gap-3">
+  <div id="highway-banner" class="hidden fixed top-20 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-blue-950/95 border-2 border-blue-500 rounded-2xl p-3 sm:p-4 shadow-2xl flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
       <div class="text-3xl sm:text-4xl p-2 bg-blue-900/80 rounded-xl border border-blue-400">🛣️</div>
       <div>
@@ -102,7 +95,7 @@
     <span class="text-2xl">💺</span>
   </div>
 
-  <!-- ================= TOP TURN BANNER (BLACK FONTS ON HIGH CONTRAST) ================= -->
+  <!-- ================= TOP TURN BANNER (HIGH CONTRAST BLACK FONTS) ================= -->
   <div id="nav-banner" class="hidden fixed top-2 left-2 right-2 sm:left-4 sm:right-4 lg:right-[430px] z-[9999] bg-slate-900/98 backdrop-blur-md border border-emerald-500/60 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2.5">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-3 min-w-0">
@@ -113,13 +106,15 @@
             <span>In: <b id="nav-step-dist" class="text-emerald-400 font-mono text-sm">--</b></span>
             <span>•</span>
             <span>Speed: <b id="live-speed" class="text-amber-400 font-mono">0 km/h</b></span>
+            <span>•</span>
+            <span id="traffic-indicator" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500 text-emerald-300 font-bold">🟢 Light Traffic</span>
           </div>
         </div>
       </div>
       <button onclick="stopNavigation()" class="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition shadow-md" id="banner-btn-stop">Exit</button>
     </div>
 
-    <!-- ETA ani Remaining Distance black font madhe spashth disnyasathi -->
+    <!-- ETA සහ Remaining Distance පැහැදිලි Black Fonts සහිතව -->
     <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs gap-2">
       <div class="bg-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-400 flex items-center gap-1.5 shadow-sm">
         <span class="text-black font-semibold text-[11px]" id="banner-lbl-rem">Remaining:</span>
@@ -182,7 +177,7 @@
           <input 
             id="destination-input" 
             type="text" 
-            placeholder="යන ස්ථානය ලියන්න (උදා: Horana, Maharagama, Kottawa...)"
+            placeholder="යන ස්ථානය ලියන්න (උදා: Horana, Maharagama, Galle...)"
             class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
             onkeypress="if(event.key === 'Enter') planRoute()"
           />
@@ -264,7 +259,14 @@
     let hasAlertedHighwaySeatbelt = false;
     let lastSpeedWarningTime = 0;
     let lastSpokenStepIndex = -1;
-    let weatherAlertFired = false;
+
+    // Smart Hazard & Zone Trackers
+    let firedEvents = {
+      trafficLight: false,
+      schoolZone: false,
+      hospitalZone: false,
+      tollGate: false
+    };
 
     const i18n = {
       si: {
@@ -409,7 +411,7 @@
           utterance.lang = 'en-IN';
         }
 
-        utterance.rate = 0.80;
+        utterance.rate = 0.82;
         utterance.pitch = 1.10;
         synth.speak(utterance);
       } catch (e) {
@@ -417,27 +419,27 @@
       }
     }
 
-    function triggerWeatherConditionAlert() {
-      const banner = document.getElementById('weather-banner');
+    // Dynamic Zone / Hazard Alerts Display
+    function triggerZoneAlert(type, titleSi, titleEn, descSi, descEn, badgeText, icon, voiceSi, voicePhonetic, voiceEn) {
+      const banner = document.getElementById('zone-banner');
       banner.classList.remove('hidden');
 
-      document.getElementById('weather-icon').innerText = "🌧️";
-      document.getElementById('weather-title').innerText = currentLang === 'si' ? "කාලගුණ අනතුරු ඇඟවීම: වැසි" : "Weather Alert: Rain";
-      document.getElementById('weather-desc').innerText = currentLang === 'si' 
-        ? "ඉදිරියෙන් වැසි සහිතයි. මාර්ගය ලිස්සන සුළු විය හැක. කරුණාකර වේගය අඩු කරන්න."
-        : "Rain reported ahead. Roads may be slippery. Please reduce your speed.";
-      document.getElementById('weather-temp-badge').innerText = "26°C";
+      document.getElementById('zone-icon').innerText = icon;
+      document.getElementById('zone-title').innerText = currentLang === 'si' ? titleSi : titleEn;
+      document.getElementById('zone-desc').innerText = currentLang === 'si' ? descSi : descEn;
+      document.getElementById('zone-badge-lbl').innerText = type.toUpperCase();
+      document.getElementById('zone-badge-val').innerText = badgeText;
 
       speakVoice({
-        siText: "කාලගුණ අනතුරු ඇඟවීමයි! ඉදිරියෙන් වැසි සහිතයි. මාර්ගය ලිස්සන සුළු බැවින් කරුණාකර වේගය අඩු කරන්න.",
-        siPhonetic: "Kalaguna hecharikayi. Idiriyen wesi sahithayi. Karunakara vegaya adu karanna.",
-        enText: "Weather alert. Rain reported ahead. Please reduce your speed."
+        siText: voiceSi,
+        siPhonetic: voicePhonetic,
+        enText: voiceEn
       });
 
       setTimeout(() => { banner.classList.add('hidden'); }, 7000);
     }
 
-    function monitorVehicleSpeed(speedKmh, stepName = "") {
+    function monitorVehicleSpeed(speedKmh, stepName = "", activeZone = null) {
       const banner = document.getElementById('overspeed-banner');
       document.getElementById('warn-speed-val').innerText = `${speedKmh} km/h`;
 
@@ -446,16 +448,26 @@
                            && !normalized.includes("high level") 
                            && !normalized.includes("a4");
 
-      currentSpeedLimit = isExpressway ? 100 : 70;
+      // Dynamic Speed Limit Logic based on Zones & Roads
+      if (activeZone === "school") {
+        currentSpeedLimit = 30;
+      } else if (activeZone === "heavy_traffic") {
+        currentSpeedLimit = 40;
+      } else if (isExpressway) {
+        currentSpeedLimit = 100;
+      } else {
+        currentSpeedLimit = 70;
+      }
+
       document.getElementById('speed-limit-badge').innerText = `Limit: ${currentSpeedLimit}`;
 
       if (isExpressway && !hasAlertedHighwaySeatbelt) {
         hasAlertedHighwaySeatbelt = true;
         document.getElementById('highway-banner').classList.remove('hidden');
         speakVoice({
-          siText: "අධිවේගී මාර්ගය ආරම්භ වේ. Seat Belts පළඳින්න. වේග සීමාව 100යි.",
+          siText: "අධිවේගී මාර්ගය ආරම්භ වේ. Seat Belts පළඳින්න. වේග සීමාව පැයට කිලෝමීටර් 100යි.",
           siPhonetic: "Adivegi margaya aramba ve. Seat belts paladinna. Vega seemava seeyayi.",
-          enText: "Entering expressway. Fasten seat belts. Speed limit is 100."
+          enText: "Entering expressway. Fasten seat belts. Speed limit is 100 kilometers per hour."
         });
         setTimeout(() => document.getElementById('highway-banner').classList.add('hidden'), 7000);
       }
@@ -468,7 +480,7 @@
           speakVoice({
             siText: "අවධානය දෙන්න! වේග සීමාව ඉක්මවා ඇත. කරුණාකර වේගය අඩු කරන්න.",
             siPhonetic: "Awadhanaya denna. Vegaya vadiyi. Karunakara vegaya adu karanna.",
-            enText: "Speed limit exceeded. Please slow down."
+            enText: "Caution! Speed limit exceeded. Please slow down."
           });
         }
       } else {
@@ -749,7 +761,9 @@
       isSimulating = simulate;
       hasAlertedHighwaySeatbelt = false;
       lastSpokenStepIndex = -1;
-      weatherAlertFired = false;
+
+      // Reset intelligent road hazard trackers
+      firedEvents = { trafficLight: false, schoolZone: false, hospitalZone: false, tollGate: false };
 
       const activeRoute = allAvailableRoutes[selectedRouteIndex];
       const distInfo = formatDistance(activeRoute.distance, currentLang);
@@ -801,7 +815,7 @@
       document.getElementById('nav-banner').classList.add('hidden');
       document.getElementById('overspeed-banner').classList.add('hidden');
       document.getElementById('highway-banner').classList.add('hidden');
-      document.getElementById('weather-banner').classList.add('hidden');
+      document.getElementById('zone-banner').classList.add('hidden');
       document.getElementById('live-speed').innerText = `0 km/h`;
 
       document.getElementById('sidebar-panel').classList.remove('hidden');
@@ -858,6 +872,7 @@
       speakVoice(instruction);
     }
 
+    // Comprehensive Simulation with Traffic Lights, School, Hospital, Toll & 100km/h Highway
     function runDrivingSimulation() {
       if (simulationTimer) clearInterval(simulationTimer);
       if (!fullRouteCoords || fullRouteCoords.length === 0) return;
@@ -883,19 +898,105 @@
         if (vehicleMarker) vehicleMarker.setLatLng(pt);
         map.panTo(pt, { animate: true, duration: 0.5 });
 
-        if (idx === Math.floor(fullRouteCoords.length * 0.3) && !weatherAlertFired) {
-          weatherAlertFired = true;
-          triggerWeatherConditionAlert();
+        const progressPercent = Math.round((idx / fullRouteCoords.length) * 100);
+        const activeRoute = allAvailableRoutes[selectedRouteIndex];
+        const isHighwayRoute = activeRoute.isHighway;
+
+        // Dynamic Speed, Traffic & Hazard Triggers
+        let simSpeed = 52;
+        let activeZone = null;
+
+        // 1. Traffic Light Trigger (At 12% of trip)
+        if (progressPercent >= 12 && progressPercent <= 18) {
+          simSpeed = 24;
+          document.getElementById('traffic-indicator').innerText = "🟡 Traffic Signal Ahead";
+          document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-amber-950 border border-amber-500 text-amber-300 font-bold";
+          
+          if (!firedEvents.trafficLight) {
+            firedEvents.trafficLight = true;
+            triggerZoneAlert("Traffic Light", "වර්ණ සංඥා පුවරුව (Traffic Light)", "Traffic Signal Ahead",
+              "ඉදිරියෙන් වර්ණ සංඥා පුවරුවකි. වේගය පාලනය කර සීරුවෙන් ධාවනය කරන්න.",
+              "Traffic signal light ahead. Prepare to slow down and stop if required.",
+              "Signal", "🚦",
+              "ඉදිරියෙන් වර්ණ සංඥා පුවරුවක් ඇත. වේගය පාලනය කර සීරුවෙන් ධාවනය කරන්න.",
+              "Idiriyen traffic light ekak atha. Vegaya palanaya karanna.",
+              "Traffic light ahead. Please prepare to stop if red."
+            );
+          }
+        }
+        // 2. School Zone Trigger (At 28% of trip)
+        else if (progressPercent >= 28 && progressPercent <= 36) {
+          activeZone = "school";
+          simSpeed = 28; // Strict school zone speed
+          document.getElementById('traffic-indicator').innerText = "🏫 School Zone: Max 30";
+          document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-rose-950 border border-rose-500 text-rose-300 font-bold";
+
+          if (!firedEvents.schoolZone) {
+            firedEvents.schoolZone = true;
+            triggerZoneAlert("School Zone", "පාසල් කලාපය (School Zone)", "School Zone Ahead",
+              "ඉදිරියෙන් පාසලක් පිහිටා ඇත. වේග සීමාව 30 km/h කි. ප්‍රවේශමෙන් ධාවනය කරන්න.",
+              "School zone active ahead. Strict speed limit 30 km/h. Watch for children.",
+              "30 km/h", "🏫",
+              "ඉදිරියෙන් පාසල් කලාපයකි. වේග සීමාව පැයට කිලෝමීටර් 30යි. ප්‍රවේශමෙන් ධාවනය කරන්න.",
+              "Idiriyen pasal kalapayak. Vega seemava 30 yi. Parissamin yanna.",
+              "School zone ahead. Maximum speed limit is 30 kilometers per hour."
+            );
+          }
+        }
+        // 3. Highway Toll Gate & Full 100 km/h Highway Corridor (At 42% - 75% of trip on Expressway)
+        else if (isHighwayRoute && progressPercent >= 42 && progressPercent <= 78) {
+          if (progressPercent >= 42 && progressPercent <= 48) {
+            simSpeed = 35; // Slow down at toll booth entry
+            document.getElementById('traffic-indicator').innerText = "🛣️ Toll Gate Entry";
+            document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-blue-950 border border-blue-500 text-blue-300 font-bold";
+
+            if (!firedEvents.tollGate) {
+              firedEvents.tollGate = true;
+              triggerZoneAlert("Toll Gate", "අධිවේගී මාර්ග මුදල් කවුළුව (Toll Gate)", "Expressway Toll Gate",
+                "ඉදිරියෙන් Toll Gate කවුළුවයි. මුදල් හෝ ETC කාඩ්පත සූදානම් කරගන්න.",
+                "Toll gate ahead. Please have cash or ETC card ready for payment.",
+                "Toll Booth", "🛂",
+                "ඉදිරියෙන් අධිවේගී මාර්ග මුදල් කවුළුවයි. කරුණාකර මුදල් හෝ ETC කාඩ්පත සූදානම් කරගන්න.",
+                "Idiriyen expressway toll gate eka. Mudhal ho ETC card eka sudanam karaganna.",
+                "Expressway toll gate ahead. Please prepare toll fee or ETC card."
+              );
+            }
+          } else {
+            // Full 100 km/h High-Speed Cruising on Highway
+            simSpeed = 100;
+            document.getElementById('traffic-indicator').innerText = "⚡ Expressway: 100 km/h";
+            document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500 text-emerald-300 font-bold";
+          }
+        }
+        // 4. Hospital Zone Trigger (At 82% of trip)
+        else if (progressPercent >= 82 && progressPercent <= 89) {
+          simSpeed = 38;
+          document.getElementById('traffic-indicator').innerText = "🏥 Hospital Zone: Silence";
+          document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-sky-950 border border-sky-500 text-sky-300 font-bold";
+
+          if (!firedEvents.hospitalZone) {
+            firedEvents.hospitalZone = true;
+            triggerZoneAlert("Hospital Zone", "රෝහල් කලාපය (Hospital Zone)", "Hospital Zone Ahead",
+              "ඉදිරියෙන් රෝහලක් ඇත. නලා ශබ්ද කිරීමෙන් (Horn) වළකින්න.",
+              "Hospital zone ahead. Strictly no honking. Maintain quiet driving.",
+              "Silent Zone", "🏥",
+              "ඉදිරියෙන් රෝහල් කලාපයකි. කරුණාකර නලා ශබ්ද කිරීමෙන් වළකින්න.",
+              "Idiriyen rohal kalapayak. Karunakara nala shabda kireemen valakinna.",
+              "Hospital zone ahead. Please do not sound horn."
+            );
+          }
+        }
+        // 5. Normal Roads / Open Corridors
+        else {
+          simSpeed = 54;
+          document.getElementById('traffic-indicator').innerText = "🟢 Smooth Traffic Flow";
+          document.getElementById('traffic-indicator').className = "text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500 text-emerald-300 font-bold";
         }
 
-        const currentStep = currentRouteSteps[currentStepIndex] || {};
-        const stepRoadName = (currentStep.name || "").toLowerCase();
-
-        const isRealExpressway = (stepRoadName.includes("expressway") || stepRoadName.startsWith("e0")) && !stepRoadName.includes("high level");
-        const simSpeed = isRealExpressway ? 92 : 52;
-        
         document.getElementById('live-speed').innerText = `${simSpeed} km/h`;
-        monitorVehicleSpeed(simSpeed, currentStep.name || "");
+        
+        const currentStep = currentRouteSteps[currentStepIndex] || {};
+        monitorVehicleSpeed(simSpeed, currentStep.name || (isHighwayRoute && progressPercent >= 48 && progressPercent <= 78 ? "Expressway Corridor" : ""), activeZone);
         evaluateTurnSteps(pt);
 
         idx++;
