@@ -53,7 +53,7 @@
 </head>
 <body class="text-slate-100 flex flex-col h-full select-none font-sans">
 
-  <!-- ================= OVERSPEED ALERT POPUP ================= -->
+  <!-- ================= OVERSPEED BANNER ================= -->
   <div id="overspeed-banner" class="hidden fixed top-20 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-rose-950/95 border-2 border-rose-500 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-speed-danger flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
       <div class="text-3xl sm:text-4xl p-2 bg-rose-900/80 rounded-xl border border-rose-400 animate-bounce">🚨</div>
@@ -68,7 +68,7 @@
     </div>
   </div>
 
-  <!-- ================= HIGHWAY SEAT BELT POPUP ================= -->
+  <!-- ================= HIGHWAY SEAT BELT BANNER ================= -->
   <div id="highway-banner" class="hidden fixed top-20 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-blue-950/95 border-2 border-blue-500 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-highway flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
       <div class="text-3xl sm:text-4xl p-2 bg-blue-900/80 rounded-xl border border-blue-400">🛣️</div>
@@ -80,7 +80,7 @@
     <span class="text-2xl">💺</span>
   </div>
 
-  <!-- ================= TOP TURN BANNER (ACTIVE NAV) ================= -->
+  <!-- ================= TOP TURN BANNER ================= -->
   <div id="nav-banner" class="hidden fixed top-2 left-2 right-2 sm:left-4 sm:right-4 lg:right-[430px] z-[9999] bg-slate-900/98 backdrop-blur-md border border-emerald-500/60 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-3 min-w-0">
@@ -98,7 +98,7 @@
     </div>
 
     <div class="flex items-center justify-between pt-1.5 border-t border-slate-800 text-[11px] text-slate-400">
-      <span><span id="banner-lbl-rem">Remaining:</span> <b id="nav-total-dist" class="text-slate-200">--</b></span>
+      <span>Remaining: <b id="nav-total-dist" class="text-slate-200">--</b></span>
       <span>ETA: <b id="nav-eta" class="text-slate-200">-- min</b></span>
       <span id="nav-mode-indicator" class="text-emerald-400 font-medium">● Live GPS</span>
     </div>
@@ -114,7 +114,6 @@
       </div>
     </div>
     
-    <!-- Language Toggle & GPS Status -->
     <div class="flex items-center gap-2">
       <div class="flex bg-slate-800 border border-slate-700 rounded-lg p-0.5 text-xs font-semibold">
         <button id="lang-si-btn" onclick="setLanguage('si')" class="px-2.5 py-1 rounded bg-emerald-600 text-white transition">සිං</button>
@@ -179,7 +178,6 @@
           </div>
         </div>
 
-        <!-- සැබෑ මාර්ග ලැයිස්තුව -->
         <div>
           <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
             <span id="lbl-routes-heading">🛣️ සැබෑ මාර්ග (Actual Roads Only)</span>
@@ -188,7 +186,6 @@
           <div id="routes-comparison-list" class="space-y-2"></div>
         </div>
 
-        <!-- Navigation Buttons -->
         <div class="space-y-2 pt-1">
           <button onclick="startNavigationDirect(false)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2">
             <span class="text-base">🔊</span> <span id="btn-live-nav">සැබෑ Live Navigation අරඹන්න</span>
@@ -214,7 +211,7 @@
   <script>
     let currentLang = 'si';
     let map = null;
-    let userCoords = null; // Strictly real phone GPS
+    let userCoords = null;
     let destCoords = null;
     let userMarker = null;
     let singleDestMarker = null;
@@ -256,12 +253,7 @@
         speedWarnTitle: "අවධානය: වේගය අධිකයි!",
         speedWarnDesc: "අවදානම් වේගයක් අනාවරණය විය. කරුණාකර වේගය අඩු කරන්න.",
         highwayTitle: "අධිවේගී මාර්ගය: Seat Belts පළඳින්න!",
-        highwayDesc: "සියලුම මගීන් Seat Belts පැළඳ ඇති බව තහවුරු කරගන්න.",
-        voiceDepart: "ගමන ආරම්භ කිරීමට පෙර ඔබගේ ආරක්ෂිත පටිය පළඳින්න. ආරක්ෂිතව ධාවනය කරන්න.",
-        voiceHighway: "අවධානය දෙන්න! ඉදිරියෙන් අධිවේගී මාර්ගය ආරම්භ වේ. සියලුම මගීන් Seat Belts පැළඳ ඇති බව තහවුරු කරගන්න. වේග සීමාව පැයට කිලෝමීටර් 100කි.",
-        voiceSpeedWarn: "අවධානය දෙන්න! ඔබගේ වේගය අධිකයි. කරුණාකර වේගය අඩු කරන්න.",
-        voiceArrived: "ඔබ සාර්ථකව ගමනාන්තයට ළඟා වී ඇත.",
-        voiceStopped: "මාර්ග සංචලනය නැවැත්තුවා."
+        highwayDesc: "සියලුම මගීන් Seat Belts පැළඳ ඇති බව තහවුරු කරගන්න."
       },
       en: {
         appTitle: "Sinhala AI GPS Navigator",
@@ -281,12 +273,7 @@
         speedWarnTitle: "Caution: Speed Exceeded!",
         speedWarnDesc: "Hazardous speed detected. Please slow down immediately.",
         highwayTitle: "Expressway Ahead: Fasten Seat Belts!",
-        highwayDesc: "Ensure all vehicle passengers have fastened their seat belts.",
-        voiceDepart: "Please fasten your seat belt before departing. Drive safely.",
-        voiceHighway: "Attention! Entering highway corridor. Ensure all passengers are wearing seat belts. Speed limit is 100 kilometers per hour.",
-        voiceSpeedWarn: "Caution! You are exceeding the speed limit. Please slow down.",
-        voiceArrived: "You have arrived at your destination.",
-        voiceStopped: "Navigation stopped."
+        highwayDesc: "Ensure all vehicle passengers have fastened their seat belts."
       }
     };
 
@@ -322,13 +309,15 @@
         const roundedM = Math.round(meters);
         return { 
           display: lang === 'si' ? `${roundedM} මීටර්` : `${roundedM} m`, 
-          spoken: lang === 'si' ? `මීටර් ${roundedM}` : `${roundedM} meters` 
+          spokenSi: `meetara ${roundedM}`,
+          spokenEn: `${roundedM} meters`
         };
       } else {
         const km = (meters / 1000).toFixed(1);
         return { 
           display: `${km} km`, 
-          spoken: lang === 'si' ? `කිලෝමීටර් ${km}` : `${km} kilometers` 
+          spokenSi: `kilomeetara ${km}`,
+          spokenEn: `${km} kilometers`
         };
       }
     }
@@ -340,6 +329,39 @@
 
       startContinuousGPSTracking();
       setTimeout(() => map.invalidateSize(), 500);
+    }
+
+    // High Reliability Speech Synthesizer with Phonetic Sinhala Fallback
+    function speakVoice(sinhalaText, phoneticEnglishText) {
+      if (!('speechSynthesis' in window)) return;
+      try {
+        synth.cancel();
+
+        const voices = synth.getVoices();
+        const hasSinhala = voices.some(v => v.lang.startsWith('si') || v.lang === 'si-LK');
+
+        let utterance;
+        if (currentLang === 'si') {
+          if (hasSinhala) {
+            utterance = new SpeechSynthesisUtterance(sinhalaText);
+            utterance.lang = 'si-LK';
+          } else {
+            // Uses universal phonetic pronunciation so Sinhala words are spoken aloud on ANY PC/Phone
+            utterance = new SpeechSynthesisUtterance(phoneticEnglishText || sinhalaText);
+            const indVoice = voices.find(v => v.lang === 'en-IN') || voices.find(v => v.lang.startsWith('en')) || voices[0];
+            if (indVoice) utterance.voice = indVoice;
+            utterance.lang = 'en-IN';
+          }
+        } else {
+          utterance = new SpeechSynthesisUtterance(phoneticEnglishText);
+          utterance.lang = 'en-US';
+        }
+
+        utterance.rate = 0.95;
+        synth.speak(utterance);
+      } catch (e) {
+        console.warn("Speech error:", e);
+      }
     }
 
     function monitorVehicleSpeed(speedKmh, stepName = "") {
@@ -354,21 +376,25 @@
       currentSpeedLimit = isHighway ? 100 : 70;
       document.getElementById('speed-limit-badge').innerText = `Limit: ${currentSpeedLimit}`;
 
-      // Highway Entry Warning
       if (isHighway && !hasAlertedHighwaySeatbelt) {
         hasAlertedHighwaySeatbelt = true;
         document.getElementById('highway-banner').classList.remove('hidden');
-        speakVoice(i18n[currentLang].voiceHighway);
+        speakVoice(
+          "අවධානය දෙන්න! ඉදිරියෙන් අධිවේගී මාර්ගය ආරම්භ වේ. Seat Belts පළඳින්න. වේග සීමාව පැයට කිලෝමීටර් 100කි.",
+          "Awadhhaanaya denna. Idhiriyen adhhi-vegi maargaya aarambha ve. Seat belts paladhinna. Vega seemaawa seeyaki."
+        );
         setTimeout(() => document.getElementById('highway-banner').classList.add('hidden'), 7000);
       }
 
-      // Over Speed Danger Warning
       if (speedKmh > currentSpeedLimit) {
         banner.classList.remove('hidden');
         const now = Date.now();
         if (now - lastSpeedWarningTime > 12000) {
           lastSpeedWarningTime = now;
-          speakVoice(i18n[currentLang].voiceSpeedWarn);
+          speakVoice(
+            "අවධානය දෙන්න! ඔබගේ වේගය අධිකයි. කරුණාකර වේගය අඩු කරන්න.",
+            "Awadhhaanaya denna. Obage vegaya adhhikayi. Karunaakara vegaya adu karanna."
+          );
         }
       } else {
         banner.classList.add('hidden');
@@ -421,7 +447,7 @@
           userCoords = [pos.coords.latitude, pos.coords.longitude];
           updateUserLocationMarker(userCoords);
           map.setView(userCoords, 16);
-          document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)} (Phone GPS)`;
+          document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)} (Live Phone GPS)`;
         }, null, { enableHighAccuracy: true, maximumAge: 0 });
       }
     }
@@ -438,7 +464,7 @@
       }
     }
 
-    // සැබෑ පාරවල් ඔස්සේ පමණක් OSRM Routing Engine හරහා ලබා ගැනීම
+    // Direct Real OSRM Road Request
     async function planRoute() {
       if (!userCoords) {
         alert(currentLang === 'si' ? "ඔබගේ දුරකථනයේ සැබෑ GPS ස්ථානය තවමත් හඳුනාගෙන නොමැත. කරුණාකර Location Permission Allow කර ඇත්දැයි බලන්න." : "Real phone GPS location not acquired yet. Please allow location permissions.");
@@ -472,7 +498,6 @@
         if (singleDestMarker) map.removeLayer(singleDestMarker);
         singleDestMarker = L.marker(destCoords).addTo(map).bindPopup(`<b>${destinationDisplayName}</b>`).openPopup();
 
-        // Query real-world road geometries from public OSRM router
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${userCoords[1]},${userCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
         const res = await fetch(osrmUrl);
         const data = await res.json();
@@ -483,7 +508,7 @@
             const hasExpressway = r.legs[0].steps.some(st => (st.name || "").toLowerCase().includes("expressway") || (st.name || "").startsWith("E0"));
             let title = "";
             if (currentLang === 'si') {
-              title = i === 0 ? "Route 1 (ප්‍රධාන මාර්ගය - වේගවත්ම)" : (hasExpressway ? `Route ${i + 1} (අධිවේගී / Bypass මාර්ගය)` : `Route ${i + 1} (විකල්ප සැබෑ පාර)`);
+              title = i === 0 ? "Route 1 (ප්‍රධාන මාර්ගය - වේගවත්ම)" : (hasExpressway ? `Route ${i + 1} (අධිවේගී / Expressway)` : `Route ${i + 1} (විකල්ප සැබෑ පාර)`);
             } else {
               title = i === 0 ? "Route 1 (Primary - Fastest)" : (hasExpressway ? `Route ${i + 1} (Expressway Corridor)` : `Route ${i + 1} (Alternative Road)`);
             }
@@ -583,7 +608,6 @@
       document.getElementById('nav-total-dist').innerText = activeDistInfo.display;
       document.getElementById('nav-eta').innerText = `${activeDurMin} min`;
 
-      // Flatted turn steps from legs
       const stepsContainer = document.getElementById('steps-list');
       stepsContainer.innerHTML = '';
       let stepCount = 1;
@@ -592,7 +616,8 @@
           if (st.name || st.maneuver.type !== 'depart') {
             const item = document.createElement('div');
             item.className = "text-[11px] bg-slate-800 p-2 rounded-lg border border-slate-700/60 flex items-center justify-between";
-            item.innerHTML = `<span>${stepCount}. ${getStepInstruction(st, currentLang)}</span><span class="text-slate-400 font-mono">${formatDistance(st.distance, currentLang).display}</span>`;
+            const instructionObj = getStepInstruction(st);
+            item.innerHTML = `<span>${stepCount}. ${currentLang === 'si' ? instructionObj.sinhala : instructionObj.english}</span><span class="text-slate-400 font-mono">${formatDistance(st.distance, currentLang).display}</span>`;
             stepsContainer.appendChild(item);
             stepCount++;
           }
@@ -602,38 +627,38 @@
       document.getElementById('ai-result-panel').classList.remove('hidden');
     }
 
-    function getStepInstruction(step, lang) {
+    function getStepInstruction(step) {
       const type = step.maneuver.type || "";
       const modifier = step.maneuver.modifier || "";
       const roadName = step.name ? `(${step.name})` : "";
 
-      if (lang === 'si') {
-        if (type === "depart") return `ගමන ආරම්භ කරන්න ${roadName}`;
-        if (type === "arrive") return "ඔබගේ ගමනාන්තයට ළඟා වී ඇත.";
-        if (type === "roundabout" || type === "rotary") return `වටරවුමෙන් ඉදිරියට යන්න ${roadName}`;
+      let sinhala = "කෙළින්ම ඉදිරියට ධාවනය කරන්න " + roadName;
+      let phonetic = "Kelinnma idhiriyata yaama karanna " + step.name;
+      let english = "Continue straight along " + (step.name || "the road");
 
-        if (modifier.includes("right")) {
-          if (modifier.includes("slight")) return `මඳක් දකුණට හරවන්න ${roadName}`;
-          return `දකුණට හරවන්න ${roadName}`;
-        }
-        if (modifier.includes("left")) {
-          if (modifier.includes("slight")) return `මඳක් වමට හරවන්න ${roadName}`;
-          return `වමට හරවන්න ${roadName}`;
-        }
-        if (modifier.includes("uturn")) return "යූ ටර්න් (U-Turn) එකක් ගන්න";
-
-        return `කෙළින්ම ඉදිරියට ධාවනය කරන්න ${roadName}`;
-      } else {
-        if (type === "depart") return `Start your journey on ${step.name || "the road"}`;
-        if (type === "arrive") return "You have reached your destination.";
-        if (type === "roundabout" || type === "rotary") return `Take the roundabout on ${step.name || "the road"}`;
-
-        if (modifier.includes("right")) return `Turn right onto ${step.name || "next road"}`;
-        if (modifier.includes("left")) return `Turn left onto ${step.name || "next road"}`;
-        if (modifier.includes("uturn")) return "Make a U-Turn where permissible";
-
-        return `Continue straight along ${step.name || "the road"}`;
+      if (type === "depart") {
+        sinhala = `ගමන ආරම්භ කරන්න ${roadName}`;
+        phonetic = `Gamana aarambha karanna ${step.name}`;
+        english = `Start journey on ${step.name || "the road"}`;
+      } else if (type === "arrive") {
+        sinhala = "ඔබගේ ගමනාන්තයට ළඟා වී ඇත.";
+        phonetic = "Obage gamanaanthayata lae-gaa vee aetha.";
+        english = "You have arrived at your destination.";
+      } else if (modifier.includes("right")) {
+        sinhala = `දකුණට හරවන්න ${roadName}`;
+        phonetic = `Dhakunata haravanna ${step.name}`;
+        english = `Turn right onto ${step.name || "next road"}`;
+      } else if (modifier.includes("left")) {
+        sinhala = `වමට හරවන්න ${roadName}`;
+        phonetic = `Vamata haravanna ${step.name}`;
+        english = `Turn left onto ${step.name || "next road"}`;
+      } else if (modifier.includes("uturn")) {
+        sinhala = "යූ ටර්න් (U-Turn) එකක් ගන්න";
+        phonetic = "U turn ekak ganna";
+        english = "Make a U-Turn";
       }
+
+      return { sinhala, phonetic, english };
     }
 
     // Direct Instant Activation with Seat Belt Voice Alert
@@ -651,12 +676,11 @@
       const activeRoute = allAvailableRoutes[selectedRouteIndex];
       const distInfo = formatDistance(activeRoute.distance, currentLang);
 
-      // Seat belt & departure voice alert
-      const departText = currentLang === 'si' 
-        ? `කරුණාකර ඔබගේ Seat Belt පළඳින්න. ගමනාන්තය ${destinationDisplayName} වේ. මුළු දුර ${distInfo.spoken} කි. ආරක්ෂිතව ධාවනය කරන්න.`
-        : `Please fasten your seat belt. Destination is ${destinationDisplayName}. Total distance is ${distInfo.spoken}. Drive safely.`;
+      // Seat belt & departure voice alert in Sinhala & Phonetic
+      const siDepart = `කරුණාකර ඔබගේ ආරක්ෂිත පටිය පළඳින්න. ගමනාන්තය ${destinationDisplayName} වේ. මුළු දුර ${distInfo.display} කි. ආරක්ෂිතව ධාවනය කරන්න.`;
+      const phDepart = `Karunaakara obage aarakshitha patiya paladhinna. Gamanaanthaya ${destinationDisplayName} ve. Mulu dhura ${distInfo.spokenSi}. Aarakshithawa yaama karanna.`;
       
-      speakVoice(departText);
+      speakVoice(siDepart, phDepart);
 
       document.getElementById('nav-banner').classList.remove('hidden');
       document.getElementById('nav-mode-indicator').innerText = simulate ? (currentLang === 'si' ? "● Simulation (Demo)" : "● Simulation Mode") : "● Live GPS";
@@ -709,7 +733,7 @@
         if (userCoords) map.setView(userCoords, 14);
       }, 200);
 
-      speakVoice(i18n[currentLang].voiceStopped);
+      speakVoice("මාර්ග සංචලනය නැවැත්තුවා.", "Maarga sanchalanaya naevaeththuva.");
     }
 
     function evaluateTurnSteps(currentLoc) {
@@ -725,12 +749,13 @@
 
       document.getElementById('nav-step-dist').innerText = stepDistInfo.display;
 
-      // 80m කලින් Voice අනතුරු ඇඟවීම
+      // 80m Voice Alert
       if (distToTurn < 85 && distToTurn > 45 && lastSpokenStepIndex !== currentStepIndex) {
         lastSpokenStepIndex = currentStepIndex;
-        const instruction = getStepInstruction(currentStep, currentLang);
-        const reminder = currentLang === 'si' ? `තව ${stepDistInfo.spoken}කින් ${instruction}` : `In ${stepDistInfo.spoken}, ${instruction}`;
-        speakVoice(reminder);
+        const instruction = getStepInstruction(currentStep);
+        const siReminder = `තව ${stepDistInfo.display}කින් ${instruction.sinhala}`;
+        const phReminder = `Thawa ${stepDistInfo.spokenSi}kin ${instruction.phonetic}`;
+        speakVoice(siReminder, phReminder);
       }
 
       if (distToTurn < 30 && currentStepIndex < currentRouteSteps.length - 1) {
@@ -742,10 +767,10 @@
     function updateNavigationDisplay() {
       if (!currentRouteSteps || currentRouteSteps.length === 0) return;
       const step = currentRouteSteps[currentStepIndex] || currentRouteSteps[0];
-      const text = getStepInstruction(step, currentLang);
-      document.getElementById('nav-instruction').innerText = text;
+      const instruction = getStepInstruction(step);
+      document.getElementById('nav-instruction').innerText = currentLang === 'si' ? instruction.sinhala : instruction.english;
       document.getElementById('nav-step-dist').innerText = formatDistance(step.distance || 100, currentLang).display;
-      speakVoice(text);
+      speakVoice(instruction.sinhala, instruction.phonetic);
     }
 
     function runDrivingSimulation() {
@@ -758,7 +783,7 @@
           clearInterval(simulationTimer);
           simulationTimer = null;
           if (navigationActive) {
-            speakVoice(i18n[currentLang].voiceArrived);
+            speakVoice("ඔබ සාර්ථකව ගමනාන්තයට ළඟා වී ඇත.", "Oba saarthakawa gamanaanthayata lae-gaa vee aetha.");
             stopNavigation();
           }
           return;
@@ -780,38 +805,6 @@
 
         idx++;
       }, 1000);
-    }
-
-    // 100% Reliable Sinhala & English Voice Synthesizer
-    function speakVoice(text) {
-      if ('speechSynthesis' in window) {
-        try {
-          synth.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = 0.95;
-
-          const voices = synth.getVoices();
-          if (currentLang === 'si') {
-            const sinhalaVoice = voices.find(v => v.lang.startsWith('si') || v.lang === 'si-LK');
-            if (sinhalaVoice) {
-              utterance.voice = sinhalaVoice;
-              utterance.lang = 'si-LK';
-            } else {
-              const indian = voices.find(v => v.lang === 'en-IN') || voices[0];
-              if (indian) utterance.voice = indian;
-              utterance.lang = 'en-IN';
-            }
-          } else {
-            const enVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-            if (enVoice) utterance.voice = enVoice;
-            utterance.lang = 'en-US';
-          }
-
-          synth.speak(utterance);
-        } catch (e) {
-          console.warn("Speech error:", e);
-        }
-      }
     }
 
     function calculateDistanceMeters(c1, c2) {
