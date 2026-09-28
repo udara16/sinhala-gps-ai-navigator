@@ -66,11 +66,11 @@
       <div id="weather-icon" class="text-3xl sm:text-4xl p-2 bg-sky-900/80 rounded-xl border border-sky-400">🌧️</div>
       <div>
         <h3 id="weather-title" class="text-xs sm:text-sm font-black text-sky-300 uppercase tracking-wider">කාලගුණ අනතුරු ඇඟවීම</h3>
-        <p id="weather-desc" class="text-[11px] sm:text-xs text-sky-100 font-medium">ඉදිරියෙන් වැසි සහිත කාලගුණයක් පවතියි. මාර්ගය ලිස්සන සුළු විය හැක.</p>
+        <p id="weather-desc" class="text-[11px] sm:text-xs text-sky-100 font-medium">ඉදිරියෙන් වැසි සහිතයි. මාර්ගය ලිස්සන සුළු විය හැක.</p>
       </div>
     </div>
     <div class="bg-sky-900/90 border border-sky-400 px-3 py-1.5 rounded-xl text-center shrink-0">
-      <span class="text-[9px] text-sky-300 block uppercase font-bold">Rain Alert</span>
+      <span class="text-[9px] text-sky-300 block uppercase font-bold" id="weather-badge-lbl">Rain Alert</span>
       <b id="weather-temp-badge" class="text-sm sm:text-base font-black text-white font-mono">27°C</b>
     </div>
   </div>
@@ -185,16 +185,16 @@
         
         <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-2">
           <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-400">ගමනාන්තය:</span>
+            <span class="text-slate-400" id="card-lbl-dest">ගමනාන්තය:</span>
             <b id="summary-dest-name" class="text-white text-right truncate max-w-[180px]">--</b>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/60">
             <div>
-              <span class="text-[10px] text-slate-400">මුළු දුර (GPS සිට):</span>
+              <span class="text-[10px] text-slate-400" id="card-lbl-dist">මුළු දුර (GPS සිට):</span>
               <p id="summary-distance" class="text-sm sm:text-base font-bold text-emerald-400">--</p>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400">ගතවන කාලය:</span>
+              <span class="text-[10px] text-slate-400" id="card-lbl-dur">ගතවන කාලය:</span>
               <p id="summary-duration" class="text-sm sm:text-base font-bold text-amber-400">-- min</p>
             </div>
           </div>
@@ -263,6 +263,9 @@
         planTrip: "ගමනාන්තය තෝරන්න",
         search: "සොයන්න",
         searching: "සොයමින්...",
+        destCard: "ගමනාන්තය:",
+        distCard: "මුළු දුර (GPS සිට):",
+        durCard: "ගතවන කාලය:",
         routesHeading: "🛣️ සැබෑ මාර්ග (Actual Roads Only)",
         liveNav: "සැබෑ Live Navigation අරඹන්න",
         simNav: "Live ධාවන Simulation (Demo)",
@@ -276,6 +279,9 @@
         planTrip: "Plan Destination",
         search: "Search",
         searching: "Searching...",
+        destCard: "Destination:",
+        distCard: "Total Distance:",
+        durCard: "Duration:",
         routesHeading: "🛣️ Actual Snapped Roads (OSRM)",
         liveNav: "Start Live GPS Navigation",
         simNav: "Live Driving Simulation (Demo)",
@@ -295,6 +301,9 @@
       document.getElementById('app-title').innerText = t.appTitle;
       document.getElementById('lbl-plan-trip').innerText = t.planTrip;
       document.getElementById('btn-search').innerText = t.search;
+      document.getElementById('card-lbl-dest').innerText = t.destCard;
+      document.getElementById('card-lbl-dist').innerText = t.distCard;
+      document.getElementById('card-lbl-dur').innerText = t.durCard;
       document.getElementById('lbl-routes-heading').innerText = t.routesHeading;
       document.getElementById('btn-live-nav').innerText = t.liveNav;
       document.getElementById('btn-sim-nav').innerText = t.simNav;
@@ -311,14 +320,14 @@
         const roundedM = Math.round(meters);
         return { 
           display: lang === 'si' ? `${roundedM} මීටර්` : `${roundedM} m`, 
-          spokenSi: `meetara ${roundedM}`,
+          spokenSi: `meter ${roundedM}`,
           spokenEn: `${roundedM} meters`
         };
       } else {
         const km = (meters / 1000).toFixed(1);
         return { 
           display: `${km} km`, 
-          spokenSi: `kilomeetara ${km}`,
+          spokenSi: `kilometer ${km}`,
           spokenEn: `${km} kilometers`
         };
       }
@@ -333,52 +342,60 @@
       setTimeout(() => map.invalidateSize(), 500);
     }
 
-    // 100% Reliable Sinhala Speech (Phonetic Fallback on Windows/Chrome)
-    function speakVoice(sinhalaText, phoneticText) {
+    // High Clarity Voice Synthesizer (Clear English & Clean Natural Sinhala)
+    function speakVoice(voiceObject) {
       if (!('speechSynthesis' in window)) return;
       try {
         synth.cancel();
+
         const voices = synth.getVoices();
-        const hasSinhala = voices.some(v => v.lang.startsWith('si') || v.lang === 'si-LK');
+        const hasSinhalaNative = voices.some(v => v.lang.startsWith('si') || v.lang === 'si-LK');
 
         let utterance;
         if (currentLang === 'si') {
-          if (hasSinhala) {
-            utterance = new SpeechSynthesisUtterance(sinhalaText);
+          if (hasSinhalaNative) {
+            utterance = new SpeechSynthesisUtterance(voiceObject.siText);
             utterance.lang = 'si-LK';
           } else {
-            utterance = new SpeechSynthesisUtterance(phoneticText || sinhalaText);
-            const ind = voices.find(v => v.lang === 'en-IN') || voices[0];
-            if (ind) utterance.voice = ind;
+            // Clean phonetic English words with natural South Asian cadence
+            utterance = new SpeechSynthesisUtterance(voiceObject.siPhonetic || voiceObject.siText);
+            const indVoice = voices.find(v => v.lang === 'en-IN') || voices.find(v => v.lang.startsWith('en')) || voices[0];
+            if (indVoice) utterance.voice = indVoice;
             utterance.lang = 'en-IN';
           }
         } else {
-          utterance = new SpeechSynthesisUtterance(phoneticText);
+          utterance = new SpeechSynthesisUtterance(voiceObject.enText);
+          const enVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang.startsWith('en')) || voices[0];
+          if (enVoice) utterance.voice = enVoice;
           utterance.lang = 'en-US';
         }
 
-        utterance.rate = 0.95;
+        // Slightly relaxed speech rate for maximum clarity
+        utterance.rate = 0.88;
+        utterance.pitch = 1.0;
         synth.speak(utterance);
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Speech synthesis error:", e);
+      }
     }
 
-    // ස්වයංක්‍රීය කාලගුණ අනතුරු ඇඟවීමේ පද්ධතිය (Zero API Keys needed)
     function triggerWeatherConditionAlert(stage) {
       const banner = document.getElementById('weather-banner');
       banner.classList.remove('hidden');
 
       if (stage === 'rain') {
         document.getElementById('weather-icon').innerText = "🌧️";
-        document.getElementById('weather-title').innerText = currentLang === 'si' ? "කාලගුණ අවවාදයයි: තද වැසි" : "Weather Caution: Heavy Rain";
+        document.getElementById('weather-title').innerText = currentLang === 'si' ? "කාලගුණ අනතුරු ඇඟවීම: තද වැසි" : "Weather Alert: Heavy Rain";
         document.getElementById('weather-desc').innerText = currentLang === 'si' 
           ? "ඉදිරියෙන් තද වැසි සහිතයි. මාර්ගය ලිස්සන සුළු බැවින් වේගය අඩු කරන්න."
-          : "Heavy rain reported ahead. Roads may be slippery. Please slow down.";
+          : "Heavy rain reported ahead. Slippery road conditions. Please reduce speed.";
         document.getElementById('weather-temp-badge').innerText = "26°C";
 
-        speakVoice(
-          "කාලගුණ අනතුරු ඇඟවීමයි! ඉදිරි මාර්ගයේ තද වැසි සහිතයි. මාර්ගය ලිස්සන සුළු බැවින් කරුණාකර වේගය අඩු කර ධාවනය කරන්න.",
-          "Kaalaguna anathuru aengaveemayi. Idhiri maargaye thadha vaehsi sahithayi. Maargaya lissana sulu baevin vegaya adu karanna."
-        );
+        speakVoice({
+          siText: "කාලගුණ අනතුරු ඇඟවීමයි! ඉදිරි මාර්ගයේ තද වැසි සහිතයි. කරුණාකර වේගය අඩු කර ධාවනය කරන්න.",
+          siPhonetic: "Kalaguna anathuru aengaveemayi. Idiriyen thada vesi sahithayi. Karunakarala vegaya adu karanna.",
+          enText: "Weather caution! Heavy rain ahead. Roads may be slippery. Please reduce your speed."
+        });
       }
 
       setTimeout(() => { banner.classList.add('hidden'); }, 8000);
@@ -399,10 +416,11 @@
       if (isHighway && !hasAlertedHighwaySeatbelt) {
         hasAlertedHighwaySeatbelt = true;
         document.getElementById('highway-banner').classList.remove('hidden');
-        speakVoice(
-          "අවධානය දෙන්න! ඉදිරියෙන් අධිවේගී මාර්ගය ආරම්භ වේ. Seat Belts පළඳින්න. වේග සීමාව පැයට කිලෝමීටර් 100කි.",
-          "Awadhhaanaya denna. Idhiriyen adhhi-vegi maargaya aarambha ve. Seat belts paladhinna. Vega seemaawa seeyaki."
-        );
+        speakVoice({
+          siText: "අධිවේගී මාර්ගය ආරම්භ වේ. සියලුම මගීන් Seat Belts පළඳින්න. වේග සීමාව පැයට කිලෝමීටර් 100කි.",
+          siPhonetic: "Adivegi margaya aramba ve. Seat belts paladinna. Vega seemava seeyaki.",
+          enText: "Entering highway corridor. Ensure all passengers are wearing seat belts. Speed limit is 100."
+        });
         setTimeout(() => document.getElementById('highway-banner').classList.add('hidden'), 7000);
       }
 
@@ -411,10 +429,11 @@
         const now = Date.now();
         if (now - lastSpeedWarningTime > 12000) {
           lastSpeedWarningTime = now;
-          speakVoice(
-            "අවධානය දෙන්න! ඔබගේ වේගය අධිකයි. කරුණාකර වේගය අඩු කරන්න.",
-            "Awadhhaanaya denna. Obage vegaya adhhikayi. Karunaakara vegaya adu karanna."
-          );
+          speakVoice({
+            siText: "අවධානය දෙන්න! ඔබගේ වේගය අධිකයි. කරුණාකර වේගය අඩු කරන්න.",
+            siPhonetic: "Awadhanaya denna. Obage vegaya adikayi. Karunakarala vegaya adu karanna.",
+            enText: "Caution! You are exceeding the speed limit. Please slow down immediately."
+          });
         }
       } else {
         banner.classList.add('hidden');
@@ -484,7 +503,6 @@
       }
     }
 
-    // Direct Real OSRM Road Router
     async function planRoute() {
       if (!userCoords) {
         alert(currentLang === 'si' ? "ඔබගේ දුරකථනයේ සැබෑ GPS ස්ථානය තවමත් හඳුනාගෙන නොමැත." : "GPS location not acquired yet.");
@@ -638,7 +656,7 @@
             const item = document.createElement('div');
             item.className = "text-[11px] bg-slate-800 p-2 rounded-lg border border-slate-700/60 flex items-center justify-between";
             const instructionObj = getStepInstruction(st);
-            item.innerHTML = `<span>${stepCount}. ${currentLang === 'si' ? instructionObj.sinhala : instructionObj.english}</span><span class="text-slate-400 font-mono">${formatDistance(st.distance, currentLang).display}</span>`;
+            item.innerHTML = `<span>${stepCount}. ${currentLang === 'si' ? instructionObj.siText : instructionObj.enText}</span><span class="text-slate-400 font-mono">${formatDistance(st.distance, currentLang).display}</span>`;
             stepsContainer.appendChild(item);
             stepCount++;
           }
@@ -653,36 +671,35 @@
       const modifier = step.maneuver.modifier || "";
       const roadName = step.name ? `(${step.name})` : "";
 
-      let sinhala = "කෙළින්ම ඉදිරියට ධාවනය කරන්න " + roadName;
-      let phonetic = "Kelinnma idhiriyata yaama karanna " + step.name;
-      let english = "Continue straight along " + (step.name || "the road");
+      let siText = "කෙළින්ම ඉදිරියට ධාවනය කරන්න " + roadName;
+      let siPhonetic = "Kelimma idiriyata yanna " + (step.name || "");
+      let enText = "Continue straight along " + (step.name || "the road");
 
       if (type === "depart") {
-        sinhala = `ගමන ආරම්භ කරන්න ${roadName}`;
-        phonetic = `Gamana aarambha karanna ${step.name}`;
-        english = `Start journey on ${step.name || "the road"}`;
+        siText = `ගමන ආරම්භ කරන්න ${roadName}`;
+        siPhonetic = `Gamana aramba karanna ${step.name || ""}`;
+        enText = `Start journey on ${step.name || "the road"}`;
       } else if (type === "arrive") {
-        sinhala = "ඔබගේ ගමනාන්තයට ළඟා වී ඇත.";
-        phonetic = "Obage gamanaanthayata lae-gaa vee aetha.";
-        english = "You have arrived at your destination.";
+        siText = "ඔබ ගමනාන්තයට ළඟා වී ඇත.";
+        siPhonetic = "Oba gamananthayata ladaa vee atha.";
+        enText = "You have reached your destination.";
       } else if (modifier.includes("right")) {
-        sinhala = `දකුණට හරවන්න ${roadName}`;
-        phonetic = `Dhakunata haravanna ${step.name}`;
-        english = `Turn right onto ${step.name || "next road"}`;
+        siText = `දකුණට හරවන්න ${roadName}`;
+        siPhonetic = `Dhakunata haravanna ${step.name || ""}`;
+        enText = `Turn right onto ${step.name || "next road"}`;
       } else if (modifier.includes("left")) {
-        sinhala = `වමට හරවන්න ${roadName}`;
-        phonetic = `Vamata haravanna ${step.name}`;
-        english = `Turn left onto ${step.name || "next road"}`;
+        siText = `වමට හරවන්න ${roadName}`;
+        siPhonetic = `Wamata haravanna ${step.name || ""}`;
+        enText = `Turn left onto ${step.name || "next road"}`;
       } else if (modifier.includes("uturn")) {
-        sinhala = "යූ ටර්න් (U-Turn) එකක් ගන්න";
-        phonetic = "U turn ekak ganna";
-        english = "Make a U-Turn";
+        siText = "යූ ටර්න් (U-Turn) එකක් ගන්න";
+        siPhonetic = "U turn ekak ganna";
+        enText = "Make a legal U-Turn";
       }
 
-      return { sinhala, phonetic, english };
+      return { siText, siPhonetic, enText };
     }
 
-    // Direct Instant Activation with Seat Belt & Weather Briefing
     function startNavigationDirect(simulate = false) {
       if (!allAvailableRoutes || allAvailableRoutes.length === 0 || !userCoords) {
         alert("කරුණාකර පළමුව ගමනාන්තයක් Search කරන්න.");
@@ -698,10 +715,12 @@
       const activeRoute = allAvailableRoutes[selectedRouteIndex];
       const distInfo = formatDistance(activeRoute.distance, currentLang);
 
-      // Seat belt & Start Voice Alert
-      const siDepart = `කරුණාකර ඔබගේ ආරක්ෂිත පටිය පළඳින්න. ගමනාන්තය ${destinationDisplayName} වේ. මුළු දුර ${distInfo.display} කි. ආරක්ෂිතව ධාවනය කරන්න.`;
-      const phDepart = `Karunaakara obage aarakshitha patiya paladhinna. Gamanaanthaya ${destinationDisplayName} ve. Mulu dhura ${distInfo.spokenSi}. Aarakshithawa yaama karanna.`;
-      speakVoice(siDepart, phDepart);
+      // Seat belt & initial voice advice
+      speakVoice({
+        siText: `කරුණාකර ඔබගේ ආරක්ෂිත පටිය පළඳින්න. ගමනාන්තය ${destinationDisplayName} වේ. මුළු දුර ${distInfo.display} කි. ආරක්ෂිතව ධාවනය කරන්න.`,
+        siPhonetic: `Karunakarala obage seat belt eka paladinna. Gamananthaya ${destinationDisplayName}. Mulu dura ${distInfo.spokenSi}. Arakshithava yanna.`,
+        enText: `Please fasten your seat belt. Destination is ${destinationDisplayName}. Total distance is ${distInfo.spokenEn}. Drive safely.`
+      });
 
       document.getElementById('nav-banner').classList.remove('hidden');
       document.getElementById('nav-mode-indicator').innerText = simulate ? "● Simulation (Demo)" : "● Live GPS";
@@ -755,7 +774,11 @@
         if (userCoords) map.setView(userCoords, 14);
       }, 200);
 
-      speakVoice("මාර්ග සංචලනය නැවැත්තුවා.", "Maarga sanchalanaya naevaeththuva.");
+      speakVoice({
+        siText: "මාර්ග සංචලනය නැවැත්තුවා.",
+        siPhonetic: "Marga sanchalanaya neweththuwa.",
+        enText: "Navigation stopped."
+      });
     }
 
     function evaluateTurnSteps(currentLoc) {
@@ -771,13 +794,15 @@
 
       document.getElementById('nav-step-dist').innerText = stepDistInfo.display;
 
-      // 80m කලින් Voice අනතුරු ඇඟවීම
+      // Upcoming maneuver alert 80 meters prior
       if (distToTurn < 85 && distToTurn > 45 && lastSpokenStepIndex !== currentStepIndex) {
         lastSpokenStepIndex = currentStepIndex;
         const instruction = getStepInstruction(currentStep);
-        const siReminder = `තව ${stepDistInfo.display}කින් ${instruction.sinhala}`;
-        const phReminder = `Thawa ${stepDistInfo.spokenSi}kin ${instruction.phonetic}`;
-        speakVoice(siReminder, phReminder);
+        speakVoice({
+          siText: `තව මීටර් ${Math.round(distToTurn)} කින් ${instruction.siText}`,
+          siPhonetic: `Thawa meter ${Math.round(distToTurn)} kin ${instruction.siPhonetic}`,
+          enText: `In ${Math.round(distToTurn)} meters, ${instruction.enText}`
+        });
       }
 
       if (distToTurn < 30 && currentStepIndex < currentRouteSteps.length - 1) {
@@ -790,9 +815,9 @@
       if (!currentRouteSteps || currentRouteSteps.length === 0) return;
       const step = currentRouteSteps[currentStepIndex] || currentRouteSteps[0];
       const instruction = getStepInstruction(step);
-      document.getElementById('nav-instruction').innerText = currentLang === 'si' ? instruction.sinhala : instruction.english;
+      document.getElementById('nav-instruction').innerText = currentLang === 'si' ? instruction.siText : instruction.enText;
       document.getElementById('nav-step-dist').innerText = formatDistance(step.distance || 100, currentLang).display;
-      speakVoice(instruction.sinhala, instruction.phonetic);
+      speakVoice(instruction);
     }
 
     function runDrivingSimulation() {
@@ -805,7 +830,11 @@
           clearInterval(simulationTimer);
           simulationTimer = null;
           if (navigationActive) {
-            speakVoice("ඔබ සාර්ථකව ගමනාන්තයට ළඟා වී ඇත.", "Oba saarthakawa gamanaanthayata lae-gaa vee aetha.");
+            speakVoice({
+              siText: "ඔබ සාර්ථකව ගමනාන්තයට ළඟා වී ඇත.",
+              siPhonetic: "Oba sarthakava gamananthayata ladaa vee atha.",
+              enText: "You have arrived at your destination."
+            });
             stopNavigation();
           }
           return;
@@ -816,7 +845,7 @@
         if (vehicleMarker) vehicleMarker.setLatLng(pt);
         map.panTo(pt, { animate: true, duration: 0.5 });
 
-        // ගමන අතරමගදී (ගමනෙන් 30%ක් ගිය පසු) සජීවී කාලගුණ අනතුරු ඇඟවීම නිකුත් කිරීම
+        // Trigger weather advisory around 30% into the trip
         if (idx === Math.floor(fullRouteCoords.length * 0.3) && !weatherAlertFired) {
           weatherAlertFired = true;
           triggerWeatherConditionAlert('rain');
