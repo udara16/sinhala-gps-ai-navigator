@@ -69,9 +69,9 @@
         <p id="weather-desc" class="text-[11px] sm:text-xs text-sky-100 font-medium">ඉදිරියෙන් වැසි සහිතයි. මාර්ගය ලිස්සන සුළු විය හැක.</p>
       </div>
     </div>
-    <div class="bg-sky-900/90 border border-sky-400 px-3 py-1.5 rounded-xl text-center shrink-0">
-      <span class="text-[9px] text-sky-300 block uppercase font-bold">Rain Alert</span>
-      <b id="weather-temp-badge" class="text-sm sm:text-base font-black text-white font-mono">27°C</b>
+    <div class="bg-sky-200 border border-sky-400 px-3 py-1.5 rounded-xl text-center shrink-0">
+      <span class="text-[9px] text-sky-900 block uppercase font-bold">Rain Alert</span>
+      <b id="weather-temp-badge" class="text-sm sm:text-base font-black text-black font-mono">27°C</b>
     </div>
   </div>
 
@@ -84,9 +84,9 @@
         <p id="speed-warn-desc" class="text-[11px] sm:text-xs text-rose-100 font-medium">නියමිත වේග සීමාව ඉක්මවා ඇත. කරුණාකර වේගය අඩු කරන්න.</p>
       </div>
     </div>
-    <div class="bg-rose-900/90 border border-rose-400 px-3 py-1.5 rounded-xl text-center shrink-0">
-      <span class="text-[9px] text-rose-300 block uppercase font-bold" id="speed-limit-badge">Limit: 70</span>
-      <b id="warn-speed-val" class="text-base sm:text-lg font-black text-white font-mono">0 km/h</b>
+    <div class="bg-rose-200 border border-rose-400 px-3 py-1.5 rounded-xl text-center shrink-0">
+      <span class="text-[9px] text-rose-900 block uppercase font-bold" id="speed-limit-badge">Limit: 70</span>
+      <b id="warn-speed-val" class="text-base sm:text-lg font-black text-black font-mono">0 km/h</b>
     </div>
   </div>
 
@@ -102,7 +102,7 @@
     <span class="text-2xl">💺</span>
   </div>
 
-  <!-- ================= TOP TURN BANNER (ETA & REMAINING HIGH VISIBILITY) ================= -->
+  <!-- ================= TOP TURN BANNER (BLACK FONTS ON HIGH CONTRAST) ================= -->
   <div id="nav-banner" class="hidden fixed top-2 left-2 right-2 sm:left-4 sm:right-4 lg:right-[430px] z-[9999] bg-slate-900/98 backdrop-blur-md border border-emerald-500/60 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2.5">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-3 min-w-0">
@@ -119,16 +119,16 @@
       <button onclick="stopNavigation()" class="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition shadow-md" id="banner-btn-stop">Exit</button>
     </div>
 
-    <!-- පැහැදිලිව පෙනෙන ETA සහ ඉතිරි දුර (Yellow/Amber & Green Highlights) -->
+    <!-- ETA ani Remaining Distance black font madhe spashth disnyasathi -->
     <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs gap-2">
-      <div class="bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/80 flex items-center gap-1.5">
-        <span class="text-slate-400 text-[11px]" id="banner-lbl-rem">Remaining:</span>
-        <b id="nav-total-dist" class="text-emerald-400 font-mono font-bold tracking-wide">--</b>
+      <div class="bg-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-400 flex items-center gap-1.5 shadow-sm">
+        <span class="text-black font-semibold text-[11px]" id="banner-lbl-rem">Remaining:</span>
+        <b id="nav-total-dist" class="text-black font-mono font-black text-xs tracking-wide">--</b>
       </div>
       
-      <div class="bg-slate-800/90 px-2.5 py-1 rounded-lg border border-amber-500/30 flex items-center gap-1.5">
-        <span class="text-amber-400 font-bold text-[11px]">ETA:</span>
-        <b id="nav-eta" class="text-amber-300 font-bold tracking-wide">--</b>
+      <div class="bg-amber-300 px-3 py-1.5 rounded-xl border border-amber-400 flex items-center gap-1.5 shadow-sm">
+        <span class="text-black font-semibold text-[11px]">ETA:</span>
+        <b id="nav-eta" class="text-black font-black text-xs tracking-wide">--</b>
       </div>
 
       <span id="nav-mode-indicator" class="text-emerald-400 font-semibold text-[11px] shrink-0">● Live GPS</span>
@@ -198,13 +198,13 @@
             <b id="summary-dest-name" class="text-white text-right truncate max-w-[180px]">--</b>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/60">
-            <div>
-              <span class="text-[10px] text-slate-400" id="card-lbl-dist">මුළු දුර (GPS සිට):</span>
-              <p id="summary-distance" class="text-sm sm:text-base font-bold text-emerald-400">--</p>
+            <div class="bg-emerald-100 p-2 rounded-lg border border-emerald-300">
+              <span class="text-[10px] text-emerald-900 font-bold block" id="card-lbl-dist">මුළු දුර (GPS සිට):</span>
+              <p id="summary-distance" class="text-sm sm:text-base font-black text-black">--</p>
             </div>
-            <div>
-              <span class="text-[10px] text-slate-400" id="card-lbl-dur">ගතවන කාලය:</span>
-              <p id="summary-duration" class="text-sm sm:text-base font-bold text-amber-300">--</p>
+            <div class="bg-amber-100 p-2 rounded-lg border border-amber-300">
+              <span class="text-[10px] text-amber-900 font-bold block" id="card-lbl-dur">ගතවන කාලය:</span>
+              <p id="summary-duration" class="text-sm sm:text-base font-black text-black">--</p>
             </div>
           </div>
         </div>
@@ -342,7 +342,6 @@
       }
     }
 
-    // පැය සහ මිනිත්තු දෙකෙන්ම පෙන්වීම සහ ශ්‍රවණය කිරීම
     function formatDuration(seconds, lang) {
       const totalMinutes = Math.round(seconds / 60);
       const hours = Math.floor(totalMinutes / 60);
@@ -382,7 +381,6 @@
       setTimeout(() => map.invalidateSize(), 500);
     }
 
-    // High Clarity Female Lady Voice Selection
     function getFemaleVoice() {
       if (!('speechSynthesis' in window)) return null;
       const voices = synth.getVoices();
@@ -439,7 +437,6 @@
       setTimeout(() => { banner.classList.add('hidden'); }, 7000);
     }
 
-    // Accurate Speed Limit & Expressway Detection
     function monitorVehicleSpeed(speedKmh, stepName = "") {
       const banner = document.getElementById('overspeed-banner');
       document.getElementById('warn-speed-val').innerText = `${speedKmh} km/h`;
@@ -575,7 +572,6 @@
         if (singleDestMarker) map.removeLayer(singleDestMarker);
         singleDestMarker = L.marker(destCoords).addTo(map).bindPopup(`<b>${destinationDisplayName}</b>`).openPopup();
 
-        // OSRM Direct Query (Strict Real Roads Snapping)
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${userCoords[1]},${userCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
         const res = await fetch(osrmUrl);
         const data = await res.json();
