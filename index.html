@@ -60,7 +60,7 @@
 </head>
 <body class="text-slate-100 flex flex-col h-full select-none font-sans">
 
-  <!-- ================= LIVE WEATHER ALERT POPUP ================= -->
+  <!-- ================= WEATHER ALERT POPUP ================= -->
   <div id="weather-banner" class="hidden fixed top-20 left-4 right-4 sm:left-12 sm:right-12 lg:right-[460px] z-[10001] bg-sky-950/95 border-2 border-sky-400 rounded-2xl p-3 sm:p-4 shadow-2xl pulse-weather flex items-center justify-between gap-3">
     <div class="flex items-center gap-3">
       <div id="weather-icon" class="text-3xl sm:text-4xl p-2 bg-sky-900/80 rounded-xl border border-sky-400">🌧️</div>
@@ -70,7 +70,7 @@
       </div>
     </div>
     <div class="bg-sky-900/90 border border-sky-400 px-3 py-1.5 rounded-xl text-center shrink-0">
-      <span class="text-[9px] text-sky-300 block uppercase font-bold" id="weather-badge-lbl">Rain Alert</span>
+      <span class="text-[9px] text-sky-300 block uppercase font-bold">Rain Alert</span>
       <b id="weather-temp-badge" class="text-sm sm:text-base font-black text-white font-mono">27°C</b>
     </div>
   </div>
@@ -81,7 +81,7 @@
       <div class="text-3xl sm:text-4xl p-2 bg-rose-900/80 rounded-xl border border-rose-400 animate-bounce">🚨</div>
       <div>
         <h3 id="speed-warn-title" class="text-xs sm:text-sm font-black text-rose-300 uppercase tracking-wider">අවධානය: වේගය අධිකයි!</h3>
-        <p id="speed-warn-desc" class="text-[11px] sm:text-xs text-rose-100 font-medium">අවදානම් වේගයක් අනාවරණය විය. කරුණාකර වේගය අඩු කරන්න.</p>
+        <p id="speed-warn-desc" class="text-[11px] sm:text-xs text-rose-100 font-medium">නියමිත වේග සීමාව ඉක්මවා ඇත. කරුණාකර වේගය අඩු කරන්න.</p>
       </div>
     </div>
     <div class="bg-rose-900/90 border border-rose-400 px-3 py-1.5 rounded-xl text-center shrink-0">
@@ -102,7 +102,7 @@
     <span class="text-2xl">💺</span>
   </div>
 
-  <!-- ================= TOP TURN BANNER (NAVIGATION) ================= -->
+  <!-- ================= TOP TURN BANNER ================= -->
   <div id="nav-banner" class="hidden fixed top-2 left-2 right-2 sm:left-4 sm:right-4 lg:right-[430px] z-[9999] bg-slate-900/98 backdrop-blur-md border border-emerald-500/60 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-3 min-w-0">
@@ -121,7 +121,7 @@
 
     <div class="flex items-center justify-between pt-1.5 border-t border-slate-800 text-[11px] text-slate-400">
       <span>Remaining: <b id="nav-total-dist" class="text-slate-200">--</b></span>
-      <span>ETA: <b id="nav-eta" class="text-slate-200">-- min</b></span>
+      <span>ETA: <b id="nav-eta" class="text-slate-200">--</b></span>
       <span id="nav-mode-indicator" class="text-emerald-400 font-medium">● Live GPS</span>
     </div>
   </div>
@@ -173,7 +173,7 @@
           <input 
             id="destination-input" 
             type="text" 
-            placeholder="යන ස්ථානය ලියන්න (උදා: Horana, Maharagama, Galle...)"
+            placeholder="යන ස්ථානය ලියන්න (උදා: Horana, Maharagama, Kottawa...)"
             class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
             onkeypress="if(event.key === 'Enter') planRoute()"
           />
@@ -195,7 +195,7 @@
             </div>
             <div>
               <span class="text-[10px] text-slate-400" id="card-lbl-dur">ගතවන කාලය:</span>
-              <p id="summary-duration" class="text-sm sm:text-base font-bold text-amber-400">-- min</p>
+              <p id="summary-duration" class="text-sm sm:text-base font-bold text-amber-400">--</p>
             </div>
           </div>
         </div>
@@ -333,6 +333,37 @@
       }
     }
 
+    // Paya ebong miniththu duto tei format korar function
+    function formatDuration(seconds, lang) {
+      const totalMinutes = Math.round(seconds / 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      if (hours > 0) {
+        if (lang === 'si') {
+          const mStr = minutes > 0 ? ` මිනිත්තු ${minutes}` : "";
+          return {
+            display: `පැය ${hours}${mStr}`,
+            spokenSi: `paya ${hours} yi${minutes > 0 ? ` miniththu ${minutes}` : ""}`,
+            spokenEn: `${hours} hour${hours > 1 ? 's' : ''}${minutes > 0 ? ` ${minutes} minutes` : ''}`
+          };
+        } else {
+          const mStr = minutes > 0 ? ` ${minutes} min` : "";
+          return {
+            display: `${hours} hr${mStr}`,
+            spokenSi: `paya ${hours} yi${minutes > 0 ? ` miniththu ${minutes}` : ""}`,
+            spokenEn: `${hours} hour${hours > 1 ? 's' : ''}${minutes > 0 ? ` ${minutes} minutes` : ''}`
+          };
+        }
+      } else {
+        return {
+          display: lang === 'si' ? `මිනිත්තු ${totalMinutes}` : `${totalMinutes} min`,
+          spokenSi: `miniththu ${totalMinutes}`,
+          spokenEn: `${totalMinutes} minutes`
+        };
+      }
+    }
+
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([6.9271, 79.8612], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -342,19 +373,16 @@
       setTimeout(() => map.invalidateSize(), 500);
     }
 
-    // High Quality Clear Female Voice Synthesizer
-    function getClearFemaleVoice() {
+    // High Clarity Female Lady Voice Selection
+    function getFemaleVoice() {
       if (!('speechSynthesis' in window)) return null;
       const voices = synth.getVoices();
+      const femaleKeywords = ["zira", "heera", "kaveri", "samantha", "victoria", "karen", "serena", "female", "google uk english female", "google us english female"];
       
-      // Preferred female voices across Windows, Mac, Android and Chrome
-      const femaleNames = ["zira", "heera", "kaveri", "samantha", "victoria", "karen", "serena", "female", "google uk english female", "google us english female"];
-      
-      for (let name of femaleNames) {
-        const found = voices.find(v => v.name.toLowerCase().includes(name));
-        if (found) return found;
+      for (let k of femaleKeywords) {
+        const match = voices.find(v => v.name.toLowerCase().includes(k));
+        if (match) return match;
       }
-      
       return voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en')) || voices[0];
     }
 
@@ -363,70 +391,65 @@
       try {
         synth.cancel();
 
-        const femaleVoice = getClearFemaleVoice();
-        const textToSpeak = (currentLang === 'si') 
-          ? (voiceObject.siPhonetic || voiceObject.siText) 
-          : voiceObject.enText;
+        const female = getFemaleVoice();
+        const text = (currentLang === 'si') ? (voiceObject.siPhonetic || voiceObject.siText) : voiceObject.enText;
 
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        
-        if (femaleVoice) {
-          utterance.voice = femaleVoice;
-          utterance.lang = femaleVoice.lang;
+        const utterance = new SpeechSynthesisUtterance(text);
+        if (female) {
+          utterance.voice = female;
+          utterance.lang = female.lang;
         } else {
           utterance.lang = 'en-IN';
         }
 
-        // Soft, clear, slightly higher feminine pitch and relaxed tempo
-        utterance.rate = 0.82;
-        utterance.pitch = 1.15;
+        utterance.rate = 0.80;
+        utterance.pitch = 1.10;
         synth.speak(utterance);
       } catch (e) {
-        console.warn("Audio synthesis error:", e);
+        console.warn("Speech synthesis error:", e);
       }
     }
 
-    function triggerWeatherConditionAlert(stage) {
+    function triggerWeatherConditionAlert() {
       const banner = document.getElementById('weather-banner');
       banner.classList.remove('hidden');
 
-      if (stage === 'rain') {
-        document.getElementById('weather-icon').innerText = "🌧️";
-        document.getElementById('weather-title').innerText = currentLang === 'si' ? "කාලගුණ අනතුරු ඇඟවීම: තද වැසි" : "Weather Alert: Heavy Rain";
-        document.getElementById('weather-desc').innerText = currentLang === 'si' 
-          ? "ඉදිරියෙන් තද වැසි සහිතයි. මාර්ගය ලිස්සන සුළු බැවින් වේගය අඩු කරන්න."
-          : "Heavy rain reported ahead. Roads may be slippery. Please slow down.";
-        document.getElementById('weather-temp-badge').innerText = "26°C";
+      document.getElementById('weather-icon').innerText = "🌧️";
+      document.getElementById('weather-title').innerText = currentLang === 'si' ? "කාලගුණ අනතුරු ඇඟවීම: වැසි" : "Weather Alert: Rain";
+      document.getElementById('weather-desc').innerText = currentLang === 'si' 
+        ? "ඉදිරියෙන් වැසි සහිතයි. මාර්ගය ලිස්සන සුළු විය හැක. කරුණාකර වේගය අඩු කරන්න."
+        : "Rain reported ahead. Roads may be slippery. Please reduce your speed.";
+      document.getElementById('weather-temp-badge').innerText = "26°C";
 
-        speakVoice({
-          siText: "කාලගුණ අනතුරු ඇඟවීමයි! ඉදිරියෙන් තද වැසි සහිතයි. කරුණාකර වේගය අඩු කරන්න.",
-          siPhonetic: "Kalaguna anathuruyi. Idiriyen thada vesi. Karunakara vegaya adu karanna.",
-          enText: "Weather alert. Heavy rain reported ahead. Please reduce your speed."
-        });
-      }
+      speakVoice({
+        siText: "කාලගුණ අනතුරු ඇඟවීමයි! ඉදිරියෙන් වැසි සහිතයි. මාර්ගය ලිස්සන සුළු බැවින් කරුණාකර වේගය අඩු කරන්න.",
+        siPhonetic: "Kalaguna hecharikayi. Idiriyen wesi sahithayi. Karunakara vegaya adu karanna.",
+        enText: "Weather alert. Rain reported ahead. Please reduce your speed."
+      });
 
-      setTimeout(() => { banner.classList.add('hidden'); }, 8000);
+      setTimeout(() => { banner.classList.add('hidden'); }, 7000);
     }
 
+    // Accurate Speed Limit & Expressway Detection
     function monitorVehicleSpeed(speedKmh, stepName = "") {
       const banner = document.getElementById('overspeed-banner');
       document.getElementById('warn-speed-val').innerText = `${speedKmh} km/h`;
 
-      const isHighway = stepName.toLowerCase().includes("expressway") || 
-                        stepName.toLowerCase().includes("highway") || 
-                        stepName.startsWith("e0") || 
-                        speedKmh > 75;
+      const normalized = (stepName || "").toLowerCase();
+      const isExpressway = (normalized.includes("expressway") || normalized.startsWith("e0") || normalized.includes("dakunu adivegi")) 
+                           && !normalized.includes("high level") 
+                           && !normalized.includes("a4");
 
-      currentSpeedLimit = isHighway ? 100 : 70;
+      currentSpeedLimit = isExpressway ? 100 : 70;
       document.getElementById('speed-limit-badge').innerText = `Limit: ${currentSpeedLimit}`;
 
-      if (isHighway && !hasAlertedHighwaySeatbelt) {
+      if (isExpressway && !hasAlertedHighwaySeatbelt) {
         hasAlertedHighwaySeatbelt = true;
         document.getElementById('highway-banner').classList.remove('hidden');
         speakVoice({
           siText: "අධිවේගී මාර්ගය ආරම්භ වේ. Seat Belts පළඳින්න. වේග සීමාව 100යි.",
           siPhonetic: "Adivegi margaya aramba ve. Seat belts paladinna. Vega seemava seeyayi.",
-          enText: "Entering highway corridor. Fasten seat belts. Speed limit is 100."
+          enText: "Entering expressway. Fasten seat belts. Speed limit is 100."
         });
         setTimeout(() => document.getElementById('highway-banner').classList.add('hidden'), 7000);
       }
@@ -437,9 +460,9 @@
         if (now - lastSpeedWarningTime > 12000) {
           lastSpeedWarningTime = now;
           speakVoice({
-            siText: "අවධානය දෙන්න! වේගය වැඩියි. කරුණාකර වේගය අඩු කරන්න.",
+            siText: "අවධානය දෙන්න! වේග සීමාව ඉක්මවා ඇත. කරුණාකර වේගය අඩු කරන්න.",
             siPhonetic: "Awadhanaya denna. Vegaya vadiyi. Karunakara vegaya adu karanna.",
-            enText: "Caution! You are exceeding the speed limit. Please slow down."
+            enText: "Speed limit exceeded. Please slow down."
           });
         }
       } else {
@@ -550,7 +573,11 @@
         let routes = [];
         if (data && data.code === 'Ok' && data.routes && data.routes.length > 0) {
           routes = data.routes.map((r, i) => {
-            const hasExpressway = r.legs[0].steps.some(st => (st.name || "").toLowerCase().includes("expressway") || (st.name || "").startsWith("E0"));
+            const hasExpressway = r.legs[0].steps.some(st => {
+              const name = (st.name || "").toLowerCase();
+              return (name.includes("expressway") || name.startsWith("e0")) && !name.includes("high level");
+            });
+
             let title = "";
             if (currentLang === 'si') {
               title = i === 0 ? "Route 1 (ප්‍රධාන මාර්ගය - වේගවත්ම)" : (hasExpressway ? `Route ${i + 1} (අධිවේගී / Expressway)` : `Route ${i + 1} (විකල්ප සැබෑ පාර)`);
@@ -602,7 +629,7 @@
         coords.forEach(pt => bounds.extend(pt));
 
         const distInfo = formatDistance(route.distance, currentLang);
-        const durMin = Math.round(route.duration / 60);
+        const durInfo = formatDuration(route.duration, currentLang);
 
         const polyline = L.polyline(coords, {
           color: isSelected ? colors[idx % colors.length] : '#64748b',
@@ -626,7 +653,7 @@
               <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${colors[idx % colors.length]}"></span>
               <span class="text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-300'}">${route.title}</span>
             </div>
-            <p class="text-[11px] text-slate-400 mt-0.5 ml-4">${distInfo.display} • ${durMin} min ${route.isHighway ? '⚡ Expressway' : ''}</p>
+            <p class="text-[11px] text-slate-400 mt-0.5 ml-4">${distInfo.display} • ${durInfo.display} ${route.isHighway ? '⚡ Expressway' : ''}</p>
           </div>
           <button class="text-[11px] px-2.5 py-1 rounded ${isSelected ? 'bg-emerald-600 text-white font-bold' : 'bg-slate-800 text-slate-300'}">
             ${isSelected ? i18n[currentLang].selected : i18n[currentLang].switch}
@@ -645,13 +672,13 @@
 
       const activeRoute = routes[selectedRouteIndex];
       const activeDistInfo = formatDistance(activeRoute.distance, currentLang);
-      const activeDurMin = Math.round(activeRoute.duration / 60);
+      const activeDurInfo = formatDuration(activeRoute.duration, currentLang);
 
       document.getElementById('summary-dest-name').innerText = destinationDisplayName;
       document.getElementById('summary-distance').innerText = activeDistInfo.display;
-      document.getElementById('summary-duration').innerText = `${activeDurMin} min`;
+      document.getElementById('summary-duration').innerText = activeDurInfo.display;
       document.getElementById('nav-total-dist').innerText = activeDistInfo.display;
-      document.getElementById('nav-eta').innerText = `${activeDurMin} min`;
+      document.getElementById('nav-eta').innerText = activeDurInfo.display;
 
       const stepsContainer = document.getElementById('steps-list');
       stepsContainer.innerHTML = '';
@@ -678,7 +705,7 @@
       const roadName = step.name ? `(${step.name})` : "";
 
       let siText = "කෙළින්ම ඉදිරියට ධාවනය කරන්න " + roadName;
-      let siPhonetic = "Kelinnma idiriyata yanna " + (step.name || "");
+      let siPhonetic = "Kelinma idiriyata yanna " + (step.name || "");
       let enText = "Continue straight along " + (step.name || "the road");
 
       if (type === "depart") {
@@ -720,11 +747,12 @@
 
       const activeRoute = allAvailableRoutes[selectedRouteIndex];
       const distInfo = formatDistance(activeRoute.distance, currentLang);
+      const durInfo = formatDuration(activeRoute.duration, currentLang);
 
       speakVoice({
-        siText: `කරුණාකර ඔබගේ Seat Belt පළඳින්න. ගමනාන්තය ${destinationDisplayName}. මුළු දුර ${distInfo.display} කි. ආරක්ෂිතව ධාවනය කරන්න.`,
-        siPhonetic: `Karunakara seat belt eka paladinna. Gamananthaya ${destinationDisplayName}. Mulu dura ${distInfo.spokenSi}. Arakshithava yanna.`,
-        enText: `Please fasten your seat belt. Destination is ${destinationDisplayName}. Total distance is ${distInfo.spokenEn}. Drive safely.`
+        siText: `කරුණාකර ඔබගේ Seat Belt පළඳින්න. ගමනාන්තය ${destinationDisplayName}. මුළු දුර ${distInfo.display}. ගතවන කාලය ${durInfo.display}. ආරක්ෂිතව ධාවනය කරන්න.`,
+        siPhonetic: `Karunakara seat belt eka paladinna. Gamananthaya ${destinationDisplayName}. Mulu dura ${distInfo.spokenSi}. Kalaya ${durInfo.spokenSi}. Arakshithava yanna.`,
+        enText: `Please fasten your seat belt. Destination is ${destinationDisplayName}. Distance is ${distInfo.spokenEn}. Duration is ${durInfo.spokenEn}. Drive safely.`
       });
 
       document.getElementById('nav-banner').classList.remove('hidden');
@@ -851,16 +879,18 @@
 
         if (idx === Math.floor(fullRouteCoords.length * 0.3) && !weatherAlertFired) {
           weatherAlertFired = true;
-          triggerWeatherConditionAlert('rain');
+          triggerWeatherConditionAlert();
         }
 
-        const activeRoute = allAvailableRoutes[selectedRouteIndex];
-        const isExpressway = activeRoute.isHighway && (idx >= 6 && idx <= fullRouteCoords.length - 6);
-        const simSpeed = isExpressway ? 92 : 52;
-        document.getElementById('live-speed').innerText = `${simSpeed} km/h`;
-
         const currentStep = currentRouteSteps[currentStepIndex] || {};
-        monitorVehicleSpeed(simSpeed, isExpressway ? "Expressway" : (currentStep.name || ""));
+        const stepRoadName = (currentStep.name || "").toLowerCase();
+
+        // High Level Road ba sadharon shohorer rasta hole safe speed 48-52 km/h
+        const isRealExpressway = (stepRoadName.includes("expressway") || stepRoadName.startsWith("e0")) && !stepRoadName.includes("high level");
+        const simSpeed = isRealExpressway ? 92 : 52;
+        
+        document.getElementById('live-speed').innerText = `${simSpeed} km/h`;
+        monitorVehicleSpeed(simSpeed, currentStep.name || "");
         evaluateTurnSteps(pt);
 
         idx++;
