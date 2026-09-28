@@ -58,8 +58,8 @@
     <div class="flex items-center gap-3">
       <div class="text-3xl sm:text-4xl p-2 bg-rose-900/80 rounded-xl border border-rose-400 animate-bounce">🚨</div>
       <div>
-        <h3 class="text-xs sm:text-sm font-black text-rose-300 uppercase tracking-wider">අවධානය: වේගය අධිකයි!</h3>
-        <p class="text-[11px] sm:text-xs text-rose-100 font-medium">අවදානම් වේගයක් අනාවරණය විය. කරුණාකර වේගය අඩු කරන්න.</p>
+        <h3 id="speed-warn-title" class="text-xs sm:text-sm font-black text-rose-300 uppercase tracking-wider">අවධානය: වේගය අධිකයි!</h3>
+        <p id="speed-warn-desc" class="text-[11px] sm:text-xs text-rose-100 font-medium">අවදානම් වේගයක් අනාවරණය විය. කරුණාකර වේගය අඩු කරන්න.</p>
       </div>
     </div>
     <div class="bg-rose-900/90 border border-rose-400 px-3 py-1.5 rounded-xl text-center shrink-0">
@@ -109,7 +109,7 @@
     <div class="flex items-center gap-2.5">
       <div class="p-1.5 sm:p-2 bg-emerald-600/20 text-emerald-400 rounded-lg border border-emerald-500/30 text-lg">🇱🇰</div>
       <div>
-        <h1 class="text-xs sm:text-sm font-bold text-white tracking-wide">සිංහල AI GPS Navigator</h1>
+        <h1 class="text-xs sm:text-sm font-bold text-white tracking-wide" id="app-title">සිංහල AI GPS Navigator</h1>
         <p class="text-[10px] text-slate-400 leading-tight">Designed by <span class="text-emerald-400 font-medium">Udara Dissanayake</span></p>
       </div>
     </div>
@@ -158,7 +158,7 @@
         
         <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-2">
           <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-400">ගමනාන්තය:</span>
+            <span class="text-slate-400">තෝරාගත් එකම ගමනාන්තය:</span>
             <b id="summary-dest-name" class="text-white text-right truncate max-w-[180px]">--</b>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/60">
@@ -173,16 +173,15 @@
           </div>
         </div>
 
-        <!-- සැබෑ විකල්ප මාර්ග 3ක් තේරීම -->
+        <!-- විකල්ප මාර්ග 3ම එකම ගමනාන්තයට -->
         <div>
           <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
-            <span>🛣️ පවතින විකල්ප මාර්ග (Alternative Paths)</span>
-            <span class="text-[10px] text-emerald-400">3 Routes Ready</span>
+            <span>🛣️ එකම ගමනාන්තයට ඇති විකල්ප මාර්ග</span>
+            <span class="text-[10px] text-emerald-400">3 Routes to Destination</span>
           </h3>
           <div id="routes-comparison-list" class="space-y-2"></div>
         </div>
 
-        <!-- ඍජුවම ආරම්භ වන Navigation Buttons -->
         <div class="space-y-2 pt-1">
           <button onclick="instantStart(false)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl text-xs font-bold tracking-wide transition shadow-lg flex items-center justify-center gap-2">
             <span class="text-base">🔊</span> <span>සැබෑ Live Navigation අරඹන්න</span>
@@ -207,9 +206,11 @@
 
   <script>
     let map = null;
-    let userCoords = null; // සැබෑ GPS ස්ථානය පමණි
+    let userCoords = null;
     let destCoords = null;
-    let userMarker = null, destMarker = null, vehicleMarker = null;
+    let userMarker = null;
+    let singleDestMarker = null; // තනි Destination Marker එකක් පමණි
+    let vehicleMarker = null;
     let routeLayers = [];
     let watchId = null;
     let navigationActive = false;
@@ -336,7 +337,7 @@
       }
     }
 
-    // සැබෑ පාරවල් (Real Road Polyline) OSRM Engine මඟින් ලබා ගැනීම
+    // එකම ගමනාන්තය (Exact Single Destination) වෙත සෙවීම
     async function planRoute() {
       if (!userCoords) {
         alert("ඔබගේ දුරකථනයේ සැබෑ GPS ස්ථානය තවමත් හඳුනාගෙන නොමැත. කරුණාකර Location Permission Allow කර ඇත්දැයි පරීක්ෂා කරන්න.");
@@ -367,18 +368,19 @@
         destinationDisplayName = geoData[0].display_name.split(',')[0];
         destCoords = [parseFloat(geoData[0].lat), parseFloat(geoData[0].lon)];
 
-        if (destMarker) map.removeLayer(destMarker);
-        destMarker = L.marker(destCoords).addTo(map).bindPopup(`<b>${destinationDisplayName}</b>`).openPopup();
+        // පැරණි Marker මකා දමා එකම ගමනාන්ත Marker එකක් පමණක් පිහිටුවීම
+        if (singleDestMarker) map.removeLayer(singleDestMarker);
+        singleDestMarker = L.marker(destCoords).addTo(map).bindPopup(`<b>${destinationDisplayName}</b>`).openPopup();
 
-        // සැබෑ පාරවල් ලබා ගැනීමට OSRM API එක කැඳවීම
+        // OSRM මඟින් සැබෑ පාරවල් ලබා ගැනීම
         let routes = [];
         try {
-          const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${userCoords[1]},${userCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+          const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${userCoords[1]},${userCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=3`;
           const res = await fetch(osrmUrl);
           const data = await res.json();
           if (data && data.code === 'Ok' && data.routes && data.routes.length > 0) {
             routes = data.routes.map((r, i) => ({
-              title: i === 0 ? "Route 1 (AI නිර්දේශය - ප්‍රධාන මාර්ගය)" : (i === 1 ? "Route 2 (අධිවේගී / Expressway මාර්ගය)" : "Route 3 (විකල්ප පාර)"),
+              title: i === 0 ? "Route 1 (ප්‍රධාන මාර්ගය - වේගවත්ම)" : (i === 1 ? "Route 2 (අධිවේගී / Expressway මාර්ගය)" : "Route 3 (විකල්ප පාර)"),
               distance: r.distance,
               duration: r.duration,
               isHighway: r.legs[0].steps.some(st => (st.name || "").toLowerCase().includes("expressway") || (st.name || "").startsWith("E0")),
@@ -387,14 +389,14 @@
             }));
           }
         } catch (fetchErr) {
-          console.warn("OSRM API Delay:", fetchErr);
+          console.warn("OSRM Delay:", fetchErr);
         }
 
-        // සැබෑ වක්‍ර සහිත විකල්ප මාර්ග 3ක් සහතික කිරීම
+        // මාර්ග 3ම අවසන් වන්නේ හරියටම එකම ගමනාන්තයෙන් (destCoords) පමණි
         if (routes.length === 0) {
-          routes = generateSmartRoads(userCoords, destCoords, destinationDisplayName);
+          routes = generatePathsToSingleDestination(userCoords, destCoords, destinationDisplayName);
         } else if (routes.length < 3) {
-          const extra = generateSmartRoads(userCoords, destCoords, destinationDisplayName);
+          const extra = generatePathsToSingleDestination(userCoords, destCoords, destinationDisplayName);
           if (routes.length === 1) routes.push(extra[1], extra[2]);
           else if (routes.length === 2) routes.push(extra[2]);
         }
@@ -404,7 +406,7 @@
         renderMultiRouteDisplay(allAvailableRoutes);
 
       } catch (err) {
-        allAvailableRoutes = generateSmartRoads(userCoords, [6.8488, 79.9267], destQuery);
+        allAvailableRoutes = generatePathsToSingleDestination(userCoords, [6.8488, 79.9267], destQuery);
         selectedRouteIndex = 0;
         renderMultiRouteDisplay(allAvailableRoutes);
       } finally {
@@ -413,16 +415,16 @@
       }
     }
 
-    // සැබෑ හැරවුම් සහිත Smart Road Builder (No Straight Lines)
-    function generateSmartRoads(start, end, destName) {
+    // එකම ගමනාන්තයකට (Exact Destination Point) විවිධ පාරවල් 3ක් සකසන Function එක
+    function generatePathsToSingleDestination(start, end, destName) {
       const baseDist = calculateDistanceMeters(start, end) * 1.25;
       const count = 40;
       const routes = [];
 
       const configs = [
-        { name: "Route 1 (AI නිර්දේශය - කෙටිම මාර්ගය)", curve: 0.005, factor: 1.2, speed: 90, isHwy: false },
-        { name: "Route 2 (අධිවේගී / Bypass මාර්ගය)", curve: -0.012, factor: 1.35, speed: 75, isHwy: true },
-        { name: "Route 3 (විකල්ප ප්‍රධාන මාර්ගය)", curve: 0.015, factor: 1.28, speed: 105, isHwy: false }
+        { name: "Route 1 (ප්‍රධාන මාර්ගය - කෙටිම)", curve: 0.004, factor: 1.2, speed: 90, isHwy: false },
+        { name: "Route 2 (අධිවේගී / Bypass මාර්ගය)", curve: -0.010, factor: 1.34, speed: 75, isHwy: true },
+        { name: "Route 3 (විකල්ප ප්‍රධාන මාර්ගය)", curve: 0.012, factor: 1.28, speed: 105, isHwy: false }
       ];
 
       configs.forEach(c => {
@@ -433,8 +435,10 @@
 
         for (let i = 0; i <= count; i++) {
           const t = i / count;
-          const latCurve = Math.sin(t * Math.PI) * c.curve + Math.cos(t * Math.PI * 3) * (c.curve * 0.3);
-          const lonCurve = Math.sin(t * Math.PI * 2) * (c.curve * 0.4);
+          // Curve එක 0 සිට පටන් ගෙන හරියටම අවසාන ලක්ෂ්‍යයේදී (t=1) 0 වේ. එනම් ගමනාන්ත දෙකක් ඇති නොවේ!
+          const envelope = Math.sin(t * Math.PI);
+          const latCurve = envelope * c.curve;
+          const lonCurve = envelope * (c.curve * 0.5);
 
           const lat = start[0] + (end[0] - start[0]) * t + latCurve;
           const lon = start[1] + (end[1] - start[1]) * t + lonCurve;
@@ -442,7 +446,7 @@
 
           if (i < count) {
             steps.push({
-              name: c.isHwy && i > 8 && i < 28 ? "Southern / Central Expressway Corridor" : (i === 0 ? "ප්‍රධාන මාර්ගය" : `${destName} ප්‍රවේශය`),
+              name: c.isHwy && i > 8 && i < 28 ? "අධිවේගී මාර්ගය (Expressway Link)" : (i === 0 ? "ප්‍රධාන මාර්ගය" : `${destName} ප්‍රවේශය`),
               distance: dist / count,
               duration: dur / count,
               maneuver: { type: i === 0 ? "depart" : (i === count - 1 ? "arrive" : "turn"), modifier: i % 4 === 0 ? "right" : "straight", location: [lon, lat] }
