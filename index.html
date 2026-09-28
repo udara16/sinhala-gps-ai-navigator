@@ -21,26 +21,34 @@
       overflow: hidden;
       background-color: #020617;
     }
-    #map { height: 100%; width: 100%; z-index: 10; transition: transform 0.3s ease; }
+    
+    #map-viewport {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      perspective: 800px;
+    }
+
+    #map { 
+      height: 140%; 
+      width: 140%; 
+      top: -20%;
+      left: -20%;
+      position: absolute;
+      z-index: 10; 
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      transform-origin: 50% 50%;
+    }
+
+    /* Driver Perspective 3D Tilt View (Road always heading UP) */
+    .driver-heading-up #map {
+      transform-origin: 50% 55%;
+    }
+
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     
-    /* Driver Perspective 3D Tilt View */
-    .driver-perspective {
-      perspective: 1000px;
-    }
-    .driver-perspective #map {
-      transform: rotateX(48deg) scale(1.18);
-      transform-origin: 50% 85%;
-    }
-
-    .pulse-loc {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8);
-      animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
-    }
-    @keyframes pulse-ring {
-      to { box-shadow: 0 0 0 18px rgba(16, 185, 129, 0); }
-    }
     .pulse-speed-danger {
       animation: danger-glow 1s infinite alternate;
     }
@@ -57,9 +65,6 @@
     }
     .nav-transition {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .arrow-icon-wrapper {
-      transition: transform 0.2s ease-out;
     }
   </style>
 </head>
@@ -126,7 +131,7 @@
       <button onclick="stopNavigation()" class="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition shadow-md" id="banner-btn-stop">Exit</button>
     </div>
 
-    <!-- ETA and Remaining Display with Crisp Black Fonts on High-contrast Pills -->
+    <!-- ETA සහ Remaining Distance (කළු අකුරින් පැහැදිලිව පෙනේ) -->
     <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs gap-2">
       <div class="bg-emerald-300 px-3 py-1.5 rounded-xl border border-emerald-400 flex items-center gap-1.5 shadow-sm">
         <span class="text-black font-semibold text-[11px]" id="banner-lbl-rem">Remaining:</span>
@@ -168,9 +173,11 @@
   <main class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
     
     <div id="map-container" class="w-full h-[52%] lg:h-full lg:flex-1 relative z-10 nav-transition">
-      <div id="map"></div>
+      <div id="map-viewport">
+        <div id="map"></div>
+      </div>
       
-      <!-- Floating Compass / North Toggle & Center Controls -->
+      <!-- Compass / North Toggle & Center Controls -->
       <div class="absolute bottom-4 right-4 z-[500] flex flex-col gap-2">
         <button id="btn-north" onclick="toggleNorthOrientation()" title="North Orientation Toggle" class="bg-slate-900/90 text-white w-11 h-11 rounded-xl border border-slate-700 shadow-xl flex items-center justify-center font-bold text-sm hover:bg-slate-800 transition">
           <span id="north-pointer" class="transition-transform duration-300">🧭 N</span>
@@ -417,30 +424,48 @@
       isNorthLocked = !isNorthLocked;
       const ptr = document.getElementById('north-pointer');
       const btn = document.getElementById('btn-north');
+      const mapEl = document.getElementById('map');
       
       if (isNorthLocked) {
         btn.classList.add('border-emerald-500', 'bg-emerald-950');
         ptr.style.transform = `rotate(0deg)`;
-        if (map && userCoords) map.setView(userCoords, map.getZoom(), { animate: true });
+        mapEl.style.transform = `rotate(0deg)`;
       } else {
         btn.classList.remove('border-emerald-500', 'bg-emerald-950');
         ptr.style.transform = `rotate(${currentHeading}deg)`;
+        if (navigationActive) {
+          mapEl.style.transform = `rotateX(42deg) rotate(${-currentHeading}deg) scale(1.15)`;
+        }
       }
     }
 
-    function updateArrowMarker(coords, angle) {
-      currentHeading = angle;
+    // පාර හැමවිටම උඩ පැත්තට පෙනෙන පරිදි සිතියම භ්‍රමණය කිරීම (Heading-Up)
+    function updateMapOrientation(bearing) {
+      currentHeading = bearing;
       const ptr = document.getElementById('north-pointer');
-      if (ptr && !isNorthLocked) {
-        ptr.style.transform = `rotate(${angle}deg)`;
-      }
+      const mapEl = document.getElementById('map');
 
-      // 3D Directional Blue Arrow Icon
+      if (!isNorthLocked) {
+        if (ptr) ptr.style.transform = `rotate(${-bearing}deg)`;
+        if (navigationActive) {
+          // Driver 3D Tilt View සමඟ පාර ඉදිරියට (උඩට) සිටින සේ rotate කිරීම
+          mapEl.style.transform = `rotateX(42deg) rotate(${-bearing}deg) scale(1.15)`;
+        } else {
+          mapEl.style.transform = `rotate(${-bearing}deg)`;
+        }
+      } else {
+        if (ptr) ptr.style.transform = `rotate(0deg)`;
+        mapEl.style.transform = `rotate(0deg)`;
+      }
+    }
+
+    // උඩ පැත්තට යොමු වූ නිල් පැහැති Navigation Arrow Pointer එක
+    function updateArrowMarker(coords) {
       const arrowSvg = `
-        <div class="arrow-icon-wrapper" style="transform: rotate(${angle}deg); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-          <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.6));">
-            <circle cx="50" cy="50" r="46" fill="#0f172a" fill-opacity="0.8" stroke="#38bdf8" stroke-width="4"/>
-            <path d="M50 14 L78 78 L50 62 L22 78 Z" fill="#0284c7" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+        <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+          <svg width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 6px 10px rgba(0,0,0,0.7));">
+            <circle cx="50" cy="50" r="45" fill="#0f172a" fill-opacity="0.85" stroke="#38bdf8" stroke-width="4"/>
+            <path d="M50 12 L78 78 L50 62 L22 78 Z" fill="#0284c7" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round"/>
           </svg>
         </div>
       `;
@@ -448,15 +473,14 @@
       const customArrowIcon = L.divIcon({
         html: arrowSvg,
         className: '',
-        iconSize: [44, 44],
-        iconAnchor: [22, 22]
+        iconSize: [48, 48],
+        iconAnchor: [24, 24]
       });
 
       if (!arrowMarker) {
         arrowMarker = L.marker(coords, { icon: customArrowIcon, zIndexOffset: 1000 }).addTo(map);
       } else {
         arrowMarker.setLatLng(coords);
-        arrowMarker.setIcon(customArrowIcon);
       }
     }
 
@@ -580,17 +604,18 @@
             statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> GPS Active`;
             document.getElementById('current-location-text').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)} (Phone GPS)`;
 
-            let heading = 0;
+            let heading = currentHeading;
             if (pos.coords.heading !== null && !isNaN(pos.coords.heading)) {
               heading = pos.coords.heading;
             } else if (prevCoords) {
               heading = calculateBearing(prevCoords[0], prevCoords[1], lat, lng);
             }
 
-            updateArrowMarker(userCoords, heading);
+            updateArrowMarker(userCoords);
+            updateMapOrientation(heading);
 
             if (isFirst && map) {
-              map.setView(userCoords, 14);
+              map.setView(userCoords, 15);
             }
 
             if (navigationActive && !isSimulating) {
@@ -615,7 +640,7 @@
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition((pos) => {
           userCoords = [pos.coords.latitude, pos.coords.longitude];
-          updateArrowMarker(userCoords, currentHeading);
+          updateArrowMarker(userCoords);
           map.setView(userCoords, 16);
           document.getElementById('current-location-text').innerText = `${userCoords[0].toFixed(4)}, ${userCoords[1].toFixed(4)} (Phone GPS)`;
         }, null, { enableHighAccuracy: true, maximumAge: 0 });
@@ -854,12 +879,11 @@
       document.getElementById('sidebar-panel').classList.add('hidden');
       document.getElementById('main-header').classList.add('hidden');
       
-      // Driver perspective 3D tilted view enable
       const mapContainer = document.getElementById('map-container');
       mapContainer.classList.replace('h-[52%]', 'h-full');
-      mapContainer.classList.add('driver-perspective');
+      mapContainer.classList.add('driver-heading-up');
 
-      updateArrowMarker(userCoords, currentHeading);
+      updateArrowMarker(userCoords);
 
       setTimeout(() => {
         map.invalidateSize();
@@ -895,7 +919,10 @@
       
       const mapContainer = document.getElementById('map-container');
       mapContainer.classList.replace('h-full', 'h-[52%]');
-      mapContainer.classList.remove('driver-perspective');
+      mapContainer.classList.remove('driver-heading-up');
+
+      const mapEl = document.getElementById('map');
+      mapEl.style.transform = 'rotate(0deg)';
 
       setTimeout(() => {
         map.invalidateSize();
@@ -971,9 +998,10 @@
         const nextPt = fullRouteCoords[idx + 1] || pt;
         userCoords = pt;
 
-        // Calculate heading for forward moving arrow
+        // පාර හැමවිටම උඩ පැත්තට (Upward) පෙනෙන පරිදි Heading ගණනය කර සිතියම කරකැවීම
         const bearing = calculateBearing(pt[0], pt[1], nextPt[0], nextPt[1]);
-        updateArrowMarker(pt, bearing);
+        updateArrowMarker(pt);
+        updateMapOrientation(bearing);
 
         map.panTo(pt, { animate: true, duration: 0.5 });
 
@@ -1021,7 +1049,7 @@
             );
           }
         }
-        // 3. Highway Toll Gate & 100 km/h High-Speed Cruising
+        // 3. Highway Toll Gate & 100 km/h Cruising
         else if (isHighwayRoute && progressPercent >= 42 && progressPercent <= 78) {
           if (progressPercent >= 42 && progressPercent <= 48) {
             simSpeed = 35;
